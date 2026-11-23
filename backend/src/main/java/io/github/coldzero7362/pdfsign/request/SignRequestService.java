@@ -41,6 +41,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class SignRequestService {
 
     static final double MIN_FIELD_SIZE = 8;
+    static final Duration RESEND_COOLDOWN = Duration.ofMinutes(1);
+    static final Duration RESEND_WINDOW = Duration.ofHours(24);
+    static final int RESEND_MAX = 5;
+    static final Duration RESULT_ACCESS = Duration.ofDays(30);
+    public static final String EVENT_RESENT = "MAIL_RESENT";
     static final Duration MAX_EXPIRY = Duration.ofDays(90);
 
     private final SignRequestRepository requests;
@@ -232,6 +237,64 @@ public class SignRequestService {
         return toDetail(r);
     }
 
+    public record ResendResult(String email, String kind) {
+    }
+
+    /**
+     * 수신자에게 메일을 다시 보낸다. 링크는 새로 발급하고 이전 링크는 무효가 된다.
+     * - 진행 중: 아직 끝내지 않은 서명자에게 초대 메일
+     * - 완료 후 30일 이내: 모든 수신자에게 완료본 링크 메일
+     * 수신자마다 1분 간격, 24시간에 5번까지.
+     */
+    @Transactional
+    public ResendResult resend(AppUser owner, UUID id, UUID recipientId) {
+        SignRequest r = load(owner, id);
+        Recipient x = recipients.findByRequestIdOrderBySortOrder(r.getId()).stream()
+            .filter(c -> c.getPublicId().equals(recipientId)).findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Instant now = clock.instant();
+
+        String kind;
+        if (r.getStatus().isOpen() && !r.isPastExpiry(now)) {
+            if (!x.isSigner()) {
+                throw conflict("열람자는 문서가 완료되면 완료본 링크를 받습니다.");
+            }
+            if (x.isDone()) {
+                throw conflict("이미 작성을 마친 수신자입니다.");
+            }
+            kind = "INVITATION";
+        } else if (r.getStatus() == RequestStatus.COMPLETED) {
+            if (r.getCompletedAt() != null && now.isAfter(r.getCompletedAt().plus(RESULT_ACCESS))) {
+                throw conflict("완료 후 30일이 지나 완료본 링크를 다시 보낼 수 없습니다.");
+            }
+            kind = "RESULT";
+        } else {
+            throw conflict("진행 중이거나 완료된 요청에서만 메일을 다시 보낼 수 있습니다.");
+        }
+
+        List<io.github.coldzero7362.pdfsign.audit.AuditEvent> recent =
+            audit.recentFor(x.getId(), EVENT_RESENT, now.minus(RESEND_WINDOW));
+        if (!recent.isEmpty() && now.isBefore(recent.getFirst().getCreatedAt().plus(RESEND_COOLDOWN))) {
+            throw tooMany("방금 보냈습니다. 1분 뒤에 다시 보낼 수 있습니다.");
+        }
+        if (recent.size() >= RESEND_MAX) {
+            throw tooMany("이 수신자에게는 24시간 동안 " + RESEND_MAX + "번까지 다시 보낼 수 있습니다.");
+        }
+
+        String raw = Tokens.random();
+        x.rotateAccessToken(Tokens.sha256(raw));
+        String link = templates.signLink(raw);
+        if (kind.equals("INVITATION")) {
+            mail.send(templates.invitation(x.getEmail(), x.getName(), owner.getName(), owner.getEmail(),
+                r.getTitle(), r.getMessage(), r.getExpiresAt(), link));
+        } else {
+            mail.send(templates.completedToRecipient(x.getEmail(), x.getName(), r.getTitle(), link));
+        }
+        audit.record(r.getId(), x.getId(), owner.getEmail(), EVENT_RESENT,
+            (kind.equals("INVITATION") ? "초대 메일" : "완료본 링크") + " → " + x.getEmail());
+        return new ResendResult(x.getEmail(), kind);
+    }
+
     /** 초안만 지울 수 있다. 발송한 요청은 감사 기록을 남기기 위해 지우지 않는다. */
     @Transactional
     public void deleteDraft(AppUser owner, UUID id) {
@@ -315,5 +378,13 @@ public class SignRequestService {
 
     private static ResponseStatusException bad(String message) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+
+    private static ResponseStatusException conflict(String message) {
+        return new ResponseStatusException(HttpStatus.CONFLICT, message);
+    }
+
+    private static ResponseStatusException tooMany(String message) {
+        return new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, message);
     }
 }

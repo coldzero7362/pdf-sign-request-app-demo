@@ -81,6 +81,22 @@ curl -s -X POST -H "$AUTH" $API/requests/<requestId>/cancel
 
 요청자는 완료본을 `GET /api/v1/requests/{id}/result`로 내려받습니다. 완료본의 SHA-256은 요청 상세의 `resultSha256`에 있습니다.
 
+### 메일 다시 보내기
+
+```bash
+curl -s -X POST -H "$AUTH" $API/requests/<requestId>/recipients/<recipientId>/resend
+# → {"email":"signer@example.com","kind":"INVITATION"}   (완료 후에는 "RESULT")
+```
+
+| 요청 상태 | 대상 | 보내는 메일 |
+|---|---|---|
+| 진행 중 (`SENT`, `IN_PROGRESS`) | 아직 제출·거절하지 않은 서명자 | 초대 메일 |
+| 완료 (`COMPLETED`, 30일 이내) | 모든 수신자 | 완료본 링크 |
+
+- 보낼 때마다 **링크를 새로 발급하고 이전 링크는 무효**가 됩니다. 메일을 잘못 보냈거나 링크가 샜을 때도 안전하게 다시 보낼 수 있습니다.
+- 수신자마다 1분 간격, 24시간에 5번까지 보낼 수 있습니다. 넘으면 429를 돌려줍니다. 재발송은 감사 기록(`MAIL_RESENT`)에 남습니다.
+- 조건에 맞지 않으면 409를 돌려줍니다 (열람자에게 초대 메일, 이미 제출한 서명자 등).
+
 기한(`expiresAt`)이 지난 요청은 접근할 때와 10분마다 `EXPIRED`로 바뀝니다.
 
 ## 좌표

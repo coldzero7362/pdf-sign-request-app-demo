@@ -82,6 +82,15 @@ public class SignRequestController {
         return service.cancel(currentUser.require(auth), id);
     }
 
+    @Operation(summary = "수신자에게 메일 다시 보내기",
+        description = "진행 중이면 초대 메일, 완료 후 30일 이내면 완료본 링크. 링크는 새로 발급되고 이전 링크는 무효. "
+            + "수신자마다 1분 간격, 24시간에 5번까지.")
+    @PostMapping("/{id}/recipients/{recipientId}/resend")
+    public SignRequestService.ResendResult resend(Authentication auth, @PathVariable UUID id,
+                                                  @PathVariable UUID recipientId) {
+        return service.resend(currentUser.require(auth), id, recipientId);
+    }
+
     @Operation(summary = "초안 삭제")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

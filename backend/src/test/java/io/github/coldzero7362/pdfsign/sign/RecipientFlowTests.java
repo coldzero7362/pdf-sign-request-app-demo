@@ -131,9 +131,11 @@ class RecipientFlowTests {
         return id;
     }
 
+    /** 이 주소로 간 메일 중 링크가 든 마지막 메일의 토큰. */
     String linkFor(String email) {
-        List<MailMessage> mine = outbox.sent().stream().filter(m -> m.to().equals(email)).toList();
-        assertThat(mine).as("mail to " + email).isNotEmpty();
+        List<MailMessage> mine = outbox.sent().stream()
+            .filter(m -> m.to().equals(email) && LINK.matcher(m.text()).find()).toList();
+        assertThat(mine).as("mail with link to " + email).isNotEmpty();
         Matcher m = LINK.matcher(mine.getLast().text());
         assertThat(m.find()).isTrue();
         return m.group(1);
@@ -301,6 +303,79 @@ class RecipientFlowTests {
         mvc.perform(post("/sign/api/session/link").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"" + tokenA + "\"}"))
             .andExpect(status().isNotFound());
+
+        // 완료 후 재발송: 열람자에게 완료본 링크를 새로 보내고, 이전 완료 링크는 무효
+        String oldViewerLink = linkFor(v);
+        String viewerId = JsonPath.read(mvc.perform(get("/api/v1/requests/" + id).with(owner))
+            .andReturn().getResponse().getContentAsString(), "$.recipients[2].id");
+        mvc.perform(post("/api/v1/requests/" + id + "/recipients/" + viewerId + "/resend").with(owner).with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.kind").value("RESULT"));
+        assertThat(outbox.sent().getLast().subject()).startsWith("[완료]");
+        assertThat(linkFor(v)).isNotEqualTo(oldViewerLink);
+        mvc.perform(post("/sign/api/session/link").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"" + oldViewerLink + "\"}"))
+            .andExpect(status().isNotFound());
+        mvc.perform(post("/sign/api/session/link").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"" + linkFor(v) + "\"}"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void resendRotatesLinkAndIsLimited() throws Exception {
+        String a = unique("a"), b = unique("b"), v = unique("v");
+        String id = sendRequest(a, b, v);
+        String detail = mvc.perform(get("/api/v1/requests/" + id).with(owner))
+            .andReturn().getResponse().getContentAsString();
+        String aId = JsonPath.read(detail, "$.recipients[0].id");
+        String bId = JsonPath.read(detail, "$.recipients[1].id");
+        String vId = JsonPath.read(detail, "$.recipients[2].id");
+        String oldA = linkFor(a);
+        String linkB = linkFor(b);
+
+        outbox.clear();
+        mvc.perform(post("/api/v1/requests/" + id + "/recipients/" + aId + "/resend").with(owner).with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.kind").value("INVITATION"))
+            .andExpect(jsonPath("$.email").value(a));
+        assertThat(outbox.sent()).extracting(MailMessage::to).containsExactly(a);
+        String newA = linkFor(a);
+        assertThat(newA).isNotEqualTo(oldA);
+        // 이전 링크는 무효, 새 링크로 들어갈 수 있다
+        mvc.perform(post("/sign/api/session/link").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"" + oldA + "\"}"))
+            .andExpect(status().isNotFound());
+        login(newA, a);
+
+        // 1분 안에 다시 보내기는 막힌다
+        mvc.perform(post("/api/v1/requests/" + id + "/recipients/" + aId + "/resend").with(owner).with(csrf()))
+            .andExpect(status().isTooManyRequests());
+        // 진행 중에는 열람자에게 보내지 않는다
+        mvc.perform(post("/api/v1/requests/" + id + "/recipients/" + vId + "/resend").with(owner).with(csrf()))
+            .andExpect(status().isConflict());
+        // 이미 제출한 서명자에게도 보내지 않는다
+        MockHttpSession sb = login(linkB, b);
+        mvc.perform(put("/sign/api/fields/" + fieldIds(sb).getFirst()).session(sb).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"김철수\"}"))
+            .andExpect(status().isOk());
+        mvc.perform(post("/sign/api/submit").session(sb).with(csrf())).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/requests/" + id + "/recipients/" + bId + "/resend").with(owner).with(csrf()))
+            .andExpect(status().isConflict());
+
+        // 다른 사용자는 남의 요청에 재발송할 수 없다
+        String otherSub = "other-" + UUID.randomUUID();
+        users.save(new AppUser(otherSub, otherSub + "@example.com", "남", Instant.now()));
+        mvc.perform(post("/api/v1/requests/" + id + "/recipients/" + aId + "/resend")
+                .with(oidcLogin().idToken(t -> t.subject(otherSub))
+                    .authorities(AuthorityUtils.createAuthorityList(Authorities.SESSION_AUTHORITIES)))
+                .with(csrf()))
+            .andExpect(status().isNotFound());
+
+        // 감사 기록에 남는다
+        String audit = mvc.perform(get("/api/v1/requests/" + id + "/audit").with(owner))
+            .andReturn().getResponse().getContentAsString();
+        List<String> types = JsonPath.read(audit, "$[*].type");
+        assertThat(types).contains("MAIL_RESENT");
     }
 
     @Test

@@ -286,6 +286,7 @@ public class PdfFlattener {
             case "DECLINED" -> "거절";
             case "COMPLETED" -> "전체 완료";
             case "CANCELED" -> "취소";
+            case "MAIL_RESENT" -> "메일 재발송";
             case "EXPIRED" -> "만료";
             default -> type;
         };
