@@ -524,7 +524,7 @@ export function FieldEditor({ initial }: { initial: RequestDetail }) {
         <section className="panel send-panel">
           <SaveIndicator state={saveState} message={saveMessage} />
           {sendError && <p className="err small">{sendError}</p>}
-          <button type="button" className="btn btn-primary btn-block" onClick={send} disabled={sending}>
+          <button type="button" className="btn btn-accent btn-block" onClick={send} disabled={sending}>
             {sending ? "발송 중…" : "발송하기"}
           </button>
         </section>

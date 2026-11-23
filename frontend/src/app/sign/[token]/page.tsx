@@ -174,7 +174,7 @@ function OtpStep({ token, info, onVerified }: { token: string; info: LinkInfo; o
         본인 확인을 위해 <strong>{info.maskedEmail}</strong>(으)로 인증번호를 보내 드립니다.
       </p>
       {!sent ? (
-        <button type="button" className="btn btn-primary btn-block" onClick={send} disabled={busy}>
+        <button type="button" className="btn btn-accent btn-block" onClick={send} disabled={busy}>
           인증번호 받기
         </button>
       ) : (
@@ -348,7 +348,7 @@ function Signing({
           {view.resultAvailable && (
             // 페이지 이동이 아니라 API의 파일 응답이라 <Link> 대신 <a>를 쓴다
             // eslint-disable-next-line @next/next/no-html-link-for-pages
-            <a className="btn btn-primary" href="/sign/api/result">
+            <a className="btn btn-accent" href="/sign/api/result">
               완료된 문서 내려받기
             </a>
           )}
@@ -357,7 +357,7 @@ function Signing({
               <span className="small muted">
                 필수 {filledRequired}/{required.length}
               </span>
-              <button type="button" className="btn btn-primary" onClick={submit} disabled={busy || filledRequired < required.length}>
+              <button type="button" className="btn btn-accent" onClick={submit} disabled={busy || filledRequired < required.length}>
                 제출
               </button>
               <button type="button" className="btn btn-danger" onClick={decline} disabled={busy}>
@@ -372,7 +372,7 @@ function Signing({
         <p className="notice-bar">제출했습니다. 다른 참여자가 모두 마치면 완료된 문서를 메일로 보내 드립니다.</p>
       )}
       {view.role === "VIEWER" && !view.resultAvailable && <p className="notice-bar">문서가 완료되면 내려받을 수 있습니다.</p>}
-      {view.canEdit && <p className="muted small">노란 칸을 눌러 작성하세요. 체크 칸은 누를 때마다 바뀝니다.</p>}
+      {view.canEdit && <p className="muted small">주황색 칸을 눌러 작성하세요. 체크 칸은 누를 때마다 바뀝니다.</p>}
       {error && <p className="err">{error}</p>}
 
       {!doc && !error && <p className="muted">문서를 불러오는 중…</p>}

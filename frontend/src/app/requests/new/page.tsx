@@ -63,7 +63,7 @@ function NewRequestForm() {
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder="예: 근로계약서 서명" />
         </label>
         {error && <p className="err">{error}</p>}
-        <button type="submit" className="btn btn-primary" disabled={!file || busy}>
+        <button type="submit" className="btn btn-accent" disabled={!file || busy}>
           {busy ? "올리는 중…" : "올리고 칸 배치하기"}
         </button>
       </form>
