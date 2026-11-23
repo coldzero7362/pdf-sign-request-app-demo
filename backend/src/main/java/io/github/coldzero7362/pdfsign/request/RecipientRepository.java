@@ -11,6 +11,8 @@ public interface RecipientRepository extends JpaRepository<Recipient, Long> {
 
     List<Recipient> findByRequestIdIn(List<Long> requestIds);
 
+    java.util.Optional<Recipient> findByAccessTokenHash(String accessTokenHash);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from Recipient r where r.requestId = :requestId")
     void deleteByRequestId(Long requestId);

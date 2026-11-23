@@ -30,10 +30,12 @@ public class SignRequestController {
 
     private final SignRequestService service;
     private final CurrentUser currentUser;
+    private final ResultFiles resultFiles;
 
-    public SignRequestController(SignRequestService service, CurrentUser currentUser) {
+    public SignRequestController(SignRequestService service, CurrentUser currentUser, ResultFiles resultFiles) {
         this.service = service;
         this.currentUser = currentUser;
+        this.resultFiles = resultFiles;
     }
 
     @Operation(summary = "내 요청 목록 (최근 100건)")
@@ -85,6 +87,14 @@ public class SignRequestController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(Authentication auth, @PathVariable UUID id) {
         service.deleteDraft(currentUser.require(auth), id);
+    }
+
+    @Operation(summary = "완료본 PDF 내려받기", description = "입력값을 합성하고 감사 기록 페이지를 붙인 PDF")
+    @GetMapping("/{id}/result")
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.InputStreamResource> result(
+            Authentication auth, @PathVariable UUID id) {
+        SignRequest r = service.completed(currentUser.require(auth), id);
+        return resultFiles.download(r);
     }
 
     @Operation(summary = "감사 기록")

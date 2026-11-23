@@ -56,6 +56,30 @@ public class Recipient {
     @Column(name = "decline_reason", length = 500)
     private String declineReason;
 
+    @Column(name = "access_token_hash", length = 64, unique = true)
+    private String accessTokenHash;
+
+    @Column(name = "otp_hash", length = 64)
+    private String otpHash;
+
+    @Column(name = "otp_expires_at")
+    private Instant otpExpiresAt;
+
+    @Column(name = "otp_attempts", nullable = false)
+    private int otpAttempts;
+
+    @Column(name = "otp_window_start")
+    private Instant otpWindowStart;
+
+    @Column(name = "otp_send_count", nullable = false)
+    private int otpSendCount;
+
+    @Column(name = "otp_last_sent_at")
+    private Instant otpLastSentAt;
+
+    @Column(name = "viewed_at")
+    private Instant viewedAt;
+
     protected Recipient() {
     }
 
@@ -69,9 +93,80 @@ public class Recipient {
         this.sortOrder = sortOrder;
     }
 
-    public void markSent() {
+    /** 발송할 때 메일 링크 토큰(해시)을 정한다. */
+    public void markSent(String accessTokenHash) {
         this.status = RecipientStatus.SENT;
+        this.accessTokenHash = accessTokenHash;
     }
+
+    /** 링크 토큰만 새로 바꾼다 (완료본 링크 발송용). 상태는 그대로 둔다. */
+    public void rotateAccessToken(String accessTokenHash) {
+        this.accessTokenHash = accessTokenHash;
+    }
+
+    public boolean isSigner() {
+        return role == RecipientRole.SIGNER;
+    }
+
+    public boolean isDone() {
+        return status == RecipientStatus.COMPLETED || status == RecipientStatus.DECLINED;
+    }
+
+    // ---------- OTP ----------
+
+    /** 새 인증번호를 기록한다. 이전 번호와 틀린 횟수는 버린다. */
+    public void issueOtp(String otpHash, Instant now, Instant expiresAt, java.time.Duration window) {
+        if (otpWindowStart == null || !now.isBefore(otpWindowStart.plus(window))) {
+            this.otpWindowStart = now;
+            this.otpSendCount = 0;
+        }
+        this.otpSendCount++;
+        this.otpHash = otpHash;
+        this.otpExpiresAt = expiresAt;
+        this.otpAttempts = 0;
+        this.otpLastSentAt = now;
+    }
+
+    public int otpSendsInWindow(Instant now, java.time.Duration window) {
+        return otpWindowStart == null || !now.isBefore(otpWindowStart.plus(window)) ? 0 : otpSendCount;
+    }
+
+    public void recordOtpFailure() {
+        this.otpAttempts++;
+    }
+
+    public void clearOtp() {
+        this.otpHash = null;
+        this.otpExpiresAt = null;
+        this.otpAttempts = 0;
+    }
+
+    public void markViewed(Instant now) {
+        if (viewedAt == null) {
+            this.viewedAt = now;
+        }
+        if (status == RecipientStatus.SENT) {
+            this.status = RecipientStatus.VIEWED;
+        }
+    }
+
+    public void complete(Instant now) {
+        this.status = RecipientStatus.COMPLETED;
+        this.completedAt = now;
+    }
+
+    public void decline(String reason, Instant now) {
+        this.status = RecipientStatus.DECLINED;
+        this.declinedAt = now;
+        this.declineReason = reason;
+    }
+
+    public String getAccessTokenHash() { return accessTokenHash; }
+    public String getOtpHash() { return otpHash; }
+    public Instant getOtpExpiresAt() { return otpExpiresAt; }
+    public int getOtpAttempts() { return otpAttempts; }
+    public Instant getOtpLastSentAt() { return otpLastSentAt; }
+    public Instant getViewedAt() { return viewedAt; }
 
     public Long getId() { return id; }
     public UUID getPublicId() { return publicId; }

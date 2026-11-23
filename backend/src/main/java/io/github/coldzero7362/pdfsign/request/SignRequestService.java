@@ -1,6 +1,9 @@
 package io.github.coldzero7362.pdfsign.request;
 
 import io.github.coldzero7362.pdfsign.audit.AuditService;
+import io.github.coldzero7362.pdfsign.common.Tokens;
+import io.github.coldzero7362.pdfsign.mail.MailOutbox;
+import io.github.coldzero7362.pdfsign.mail.MailTemplates;
 import io.github.coldzero7362.pdfsign.document.Document;
 import io.github.coldzero7362.pdfsign.document.DocumentController.DocumentView;
 import io.github.coldzero7362.pdfsign.document.DocumentPage;
@@ -46,17 +49,22 @@ public class SignRequestService {
     private final DocumentRepository documents;
     private final DocumentService documentService;
     private final AuditService audit;
+    private final MailOutbox mail;
+    private final MailTemplates templates;
     private final Clock clock;
 
     public SignRequestService(SignRequestRepository requests, RecipientRepository recipients,
                               SignFieldRepository fields, DocumentRepository documents,
-                              DocumentService documentService, AuditService audit, Clock clock) {
+                              DocumentService documentService, AuditService audit,
+                              MailOutbox mail, MailTemplates templates, Clock clock) {
         this.requests = requests;
         this.recipients = recipients;
         this.fields = fields;
         this.documents = documents;
         this.documentService = documentService;
         this.audit = audit;
+        this.mail = mail;
+        this.templates = templates;
         this.clock = clock;
     }
 
@@ -174,7 +182,8 @@ public class SignRequestService {
     // ---------- 상태 전환 ----------
 
     /**
-     * 발송. 지금은 상태만 바꾸고, 수신자 메일 발송은 다음 단계에서 이 지점에 붙인다.
+     * 발송. 수신자마다 메일 링크 토큰을 만들고(해시만 저장), 서명자에게 초대 메일을 보낸다.
+     * 열람자는 완료되었을 때 완료본 링크를 받는다 (완료 시 모든 수신자의 토큰을 새로 발급해 보낸다).
      */
     @Transactional
     public RequestDetail send(AppUser owner, UUID id) {
@@ -197,7 +206,14 @@ public class SignRequestService {
             }
         }
         r.markSent(now);
-        list.forEach(Recipient::markSent);
+        for (Recipient x : list) {
+            String raw = Tokens.random();
+            x.markSent(Tokens.sha256(raw));
+            if (x.isSigner()) {
+                mail.send(templates.invitation(x.getEmail(), x.getName(), owner.getName(), owner.getEmail(),
+                    r.getTitle(), r.getMessage(), r.getExpiresAt(), templates.signLink(raw)));
+            }
+        }
         audit.record(r.getId(), null, owner.getEmail(), "SENT",
             "수신자 " + list.size() + "명: " + list.stream().map(Recipient::getEmail).collect(Collectors.joining(", ")));
         return toDetail(r);
@@ -208,6 +224,11 @@ public class SignRequestService {
         SignRequest r = load(owner, id);
         r.cancel(clock.instant());
         audit.record(r.getId(), null, owner.getEmail(), "CANCELED", null);
+        for (Recipient x : recipients.findByRequestIdOrderBySortOrder(r.getId())) {
+            if (x.isSigner() && !x.isDone()) {
+                mail.send(templates.canceledToRecipient(x.getEmail(), x.getName(), r.getTitle()));
+            }
+        }
         return toDetail(r);
     }
 
@@ -221,6 +242,16 @@ public class SignRequestService {
         audit.deleteForDraft(r.getId());
         requests.delete(requests.findById(r.getId()).orElseThrow());
         requests.flush();
+    }
+
+    /** 완료본 PDF (요청자용). */
+    @Transactional(readOnly = true)
+    public SignRequest completed(AppUser owner, UUID id) {
+        SignRequest r = load(owner, id);
+        if (r.getResultStorageKey() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "아직 완료되지 않았습니다.");
+        }
+        return r;
     }
 
     // ---------- 내부 ----------
@@ -274,6 +305,7 @@ public class SignRequestService {
             .toList();
         return new RequestDetail(r.getPublicId(), r.getTitle(), r.getMessage(), r.getStatus(), r.getExpiresAt(),
             r.getCreatedAt(), r.getUpdatedAt(), r.getSentAt(), r.getCompletedAt(), r.getCanceledAt(),
+            r.getDeclinedAt(), r.getResultSha256(), r.getResultSizeBytes(),
             DocumentView.of(doc), rv, fv);
     }
 

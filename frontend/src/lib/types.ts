@@ -56,6 +56,9 @@ export type RequestDetail = {
   sentAt: string | null;
   completedAt: string | null;
   canceledAt: string | null;
+  declinedAt: string | null;
+  resultSha256: string | null;
+  resultSizeBytes: number | null;
   document: DocumentView;
   recipients: RecipientView[];
   fields: FieldView[];

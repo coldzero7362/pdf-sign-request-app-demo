@@ -20,7 +20,15 @@ import {
 const AUDIT_LABEL: Record<string, string> = {
   CREATED: "요청 생성",
   SENT: "발송",
+  OTP_SENT: "인증번호 발송",
+  OTP_VERIFIED: "본인 확인",
+  OTP_FAILED: "인증 실패",
+  VIEWED: "문서 열람",
+  SUBMITTED: "작성 완료",
+  DECLINED: "거절",
+  COMPLETED: "전체 완료",
   CANCELED: "취소",
+  EXPIRED: "만료",
 };
 
 export default function RequestDetailPage() {
@@ -111,6 +119,11 @@ function Detail() {
               </button>
             </>
           )}
+          {detail.status === "COMPLETED" && (
+            <a className="btn btn-primary" href={`/api/v1/requests/${id}/result`}>
+              완료본 내려받기
+            </a>
+          )}
           {open && (
             <button type="button" className="btn btn-danger" onClick={cancel}>
               요청 취소
@@ -132,6 +145,7 @@ function Detail() {
                 <th>역할</th>
                 <th>상태</th>
                 <th>칸</th>
+                <th>완료·거절</th>
               </tr>
             </thead>
             <tbody>
@@ -145,6 +159,9 @@ function Detail() {
                   <td>{r.role === "SIGNER" ? "서명자" : "열람자"}</td>
                   <td>{RECIPIENT_STATUS_LABEL[r.status]}</td>
                   <td>{detail.fields.filter((f) => f.recipientId === r.id).length}</td>
+                  <td className="muted">
+                    {r.completedAt ? fmtDate(r.completedAt) : r.declinedAt ? `${fmtDate(r.declinedAt)} ${r.declineReason ?? ""}` : "-"}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -153,7 +170,11 @@ function Detail() {
         <p className="muted small">
           만든 날 {fmtDate(detail.createdAt)} · 발송 {fmtDate(detail.sentAt)} · 만료 {fmtDate(detail.expiresAt)}
         </p>
-        {open && <p className="muted small">수신자 메일 발송과 작성 화면은 다음 단계에서 연결됩니다.</p>}
+        {detail.resultSha256 && (
+          <p className="muted small" style={{ wordBreak: "break-all" }}>
+            완료 {fmtDate(detail.completedAt)} · 완료본 SHA-256 <code>{detail.resultSha256}</code>
+          </p>
+        )}
       </section>
 
       <section className="card">

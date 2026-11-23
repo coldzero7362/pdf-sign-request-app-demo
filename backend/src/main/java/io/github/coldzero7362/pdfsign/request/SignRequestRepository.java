@@ -12,4 +12,7 @@ public interface SignRequestRepository extends JpaRepository<SignRequest, Long> 
     List<SignRequest> findTop100ByOwnerIdOrderByCreatedAtDesc(Long ownerId);
 
     List<SignRequest> findTop100ByOwnerIdAndStatusOrderByCreatedAtDesc(Long ownerId, RequestStatus status);
+
+    List<SignRequest> findByStatusInAndExpiresAtLessThanEqual(java.util.Collection<RequestStatus> statuses,
+                                                              java.time.Instant now);
 }

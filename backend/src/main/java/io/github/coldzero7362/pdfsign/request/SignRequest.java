@@ -62,6 +62,18 @@ public class SignRequest {
     @Column(name = "canceled_at")
     private Instant canceledAt;
 
+    @Column(name = "declined_at")
+    private Instant declinedAt;
+
+    @Column(name = "result_storage_key", length = 100)
+    private String resultStorageKey;
+
+    @Column(name = "result_sha256", length = 64)
+    private String resultSha256;
+
+    @Column(name = "result_size_bytes")
+    private Long resultSizeBytes;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -115,6 +127,40 @@ public class SignRequest {
         this.updatedAt = now;
     }
 
+    /** 수신자가 처음 열람하면 진행 중으로 바꾼다. */
+    public void markInProgress(Instant now) {
+        if (status == RequestStatus.SENT) {
+            this.status = RequestStatus.IN_PROGRESS;
+            this.updatedAt = now;
+        }
+    }
+
+    public void complete(String resultKey, String resultSha256, long resultSize, Instant now) {
+        this.status = RequestStatus.COMPLETED;
+        this.resultStorageKey = resultKey;
+        this.resultSha256 = resultSha256;
+        this.resultSizeBytes = resultSize;
+        this.completedAt = now;
+        this.updatedAt = now;
+    }
+
+    public void decline(Instant now) {
+        this.status = RequestStatus.DECLINED;
+        this.declinedAt = now;
+        this.updatedAt = now;
+    }
+
+    public void expire(Instant now) {
+        if (status.isOpen()) {
+            this.status = RequestStatus.EXPIRED;
+            this.updatedAt = now;
+        }
+    }
+
+    public boolean isPastExpiry(Instant now) {
+        return expiresAt != null && !now.isBefore(expiresAt);
+    }
+
     public Long getId() { return id; }
     public UUID getPublicId() { return publicId; }
     public Long getOwnerId() { return ownerId; }
@@ -129,4 +175,8 @@ public class SignRequest {
     public Instant getCompletedAt() { return completedAt; }
     public Instant getCanceledAt() { return canceledAt; }
     public long getVersion() { return version; }
+    public Instant getDeclinedAt() { return declinedAt; }
+    public String getResultStorageKey() { return resultStorageKey; }
+    public String getResultSha256() { return resultSha256; }
+    public Long getResultSizeBytes() { return resultSizeBytes; }
 }
