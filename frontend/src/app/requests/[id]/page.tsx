@@ -29,6 +29,7 @@ const AUDIT_LABEL: Record<string, string> = {
   COMPLETED: "전체 완료",
   CANCELED: "취소",
   EXPIRED: "만료",
+  MAIL_RESENT: "메일 재발송",
 };
 
 export default function RequestDetailPage() {
@@ -42,6 +43,8 @@ function Detail() {
   const [audit, setAudit] = useState<AuditView[]>([]);
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resendMsg, setResendMsg] = useState<Record<string, { ok: boolean; text: string }>>({});
+  const [resending, setResending] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api<RequestDetail>(`/api/v1/requests/${id}`)
@@ -89,6 +92,20 @@ function Detail() {
       router.push("/");
     } catch (e) {
       setError((e as Error).message);
+    }
+  }
+
+  async function resend(recipientId: string, email: string) {
+    if (!confirm(`${email}(으)로 메일을 다시 보낼까요? 새 링크가 발급되고 이전 링크는 더 이상 쓸 수 없습니다.`)) return;
+    setResending(recipientId);
+    try {
+      await api(`/api/v1/requests/${id}/recipients/${recipientId}/resend`, { method: "POST" });
+      setResendMsg((m) => ({ ...m, [recipientId]: { ok: true, text: "보냈습니다" } }));
+      load();
+    } catch (e) {
+      setResendMsg((m) => ({ ...m, [recipientId]: { ok: false, text: (e as Error).message } }));
+    } finally {
+      setResending(null);
     }
   }
 
@@ -146,6 +163,7 @@ function Detail() {
                 <th>상태</th>
                 <th>칸</th>
                 <th>완료·거절</th>
+                <th>메일</th>
               </tr>
             </thead>
             <tbody>
@@ -161,6 +179,28 @@ function Detail() {
                   <td>{detail.fields.filter((f) => f.recipientId === r.id).length}</td>
                   <td className="muted">
                     {r.completedAt ? fmtDate(r.completedAt) : r.declinedAt ? `${fmtDate(r.declinedAt)} ${r.declineReason ?? ""}` : "-"}
+                  </td>
+                  <td>
+                    {(() => {
+                      // 서버 규칙과 같게: 진행 중이면 미완료 서명자에게 초대, 완료되면 모두에게 완료본 링크
+                      const canInvite = open && r.role === "SIGNER" && r.status !== "COMPLETED" && r.status !== "DECLINED";
+                      const canResult = detail.status === "COMPLETED";
+                      if (!canInvite && !canResult) return <span className="muted">-</span>;
+                      const msg = resendMsg[r.id];
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-small"
+                            disabled={resending === r.id}
+                            onClick={() => resend(r.id, r.email)}
+                          >
+                            {canInvite ? "초대 메일 재발송" : "완료본 링크 재발송"}
+                          </button>
+                          {msg && <div className={`small ${msg.ok ? "ok" : "err"}`}>{msg.text}</div>}
+                        </>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

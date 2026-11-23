@@ -40,6 +40,12 @@ public class AuditService {
         events.deleteByRequestId(requestId);
     }
 
+    /** 이 수신자에게 since 이후 기록된 이벤트 (최근 것부터). */
+    @Transactional(readOnly = true)
+    public List<AuditEvent> recentFor(Long recipientId, String type, java.time.Instant since) {
+        return events.findByRecipientIdAndEventTypeAndCreatedAtAfterOrderByCreatedAtDesc(recipientId, type, since);
+    }
+
     @Transactional(readOnly = true)
     public List<AuditEvent> list(Long requestId) {
         return events.findByRequestIdOrderByCreatedAtAscIdAsc(requestId);

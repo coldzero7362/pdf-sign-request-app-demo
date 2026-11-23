@@ -9,6 +9,9 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, Long> {
 
     List<AuditEvent> findByRequestIdOrderByCreatedAtAscIdAsc(Long requestId);
 
+    List<AuditEvent> findByRecipientIdAndEventTypeAndCreatedAtAfterOrderByCreatedAtDesc(
+        Long recipientId, String eventType, java.time.Instant after);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from AuditEvent e where e.requestId = :requestId")
     void deleteByRequestId(Long requestId);
