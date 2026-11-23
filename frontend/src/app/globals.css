@@ -1,25 +1,46 @@
+/*
+ * USIGN 컬러 팔레트 (dev.usign.kr)
+ * 팔레트 원색은 --c-* 에 두고, 화면에서는 역할 이름(--bg, --text …)으로 쓴다.
+ * Success·Warning은 흰 배경 대비가 낮아(2.2, 2.0) 면·테두리에만 쓰고,
+ * 글자에는 같은 계열의 진한 색(--ok, --warn-text)을 쓴다 (WCAG AA 4.5:1).
+ */
 :root {
-  --bg: #f7f7f8;
-  --surface: #ffffff;
-  --text: #1c1c1e;
-  --muted: #6b6b72;
-  --border: #e3e3e6;
-  --accent: #2f5bea;
-  --ok: #1f8a4c;
-  --err: #c2342f;
-}
+  color-scheme: light;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141416;
-    --surface: #1e1e21;
-    --text: #ececef;
-    --muted: #9a9aa3;
-    --border: #2e2e33;
-    --accent: #7b9bff;
-    --ok: #5cc98a;
-    --err: #ff7a73;
-  }
+  /* Brand */
+  --c-primary: #1560FD;
+  --c-link: #4468F9;
+  --c-header: #345BF8;
+  --c-navy: #181A29;
+  /* Text */
+  --c-text: #111111;
+  --c-heading: #242940;
+  --c-sub: #555555;
+  --c-muted: #808087;
+  /* Surface */
+  --c-page-bg: #F2F5F8;
+  --c-surface: #FFFFFF;
+  --c-border: #E2E7EA;
+  /* Status */
+  --c-success: #2FC673;
+  --c-warning: #FFA019;
+  /* 팔레트에 없는 오류색 (흰 배경 대비 4.98) */
+  --c-danger: #D32F2F;
+
+  /* 역할 */
+  --bg: var(--c-page-bg);
+  --surface: var(--c-surface);
+  --border: var(--c-border);
+  --text: var(--c-text);
+  --heading: var(--c-heading);
+  --sub: var(--c-sub);
+  --muted: var(--c-sub);          /* 작은 보조 문구는 대비가 충분한 Sub */
+  --faint: var(--c-muted);        /* 페이지 번호, 안내 문구처럼 덜 중요한 글자 */
+  --accent: var(--c-primary);
+  --link: var(--c-link);
+  --ok: #178049;                  /* Success 계열 글자색 (대비 4.98) */
+  --warn-text: #A86400;           /* Warning 계열 글자색 (대비 4.68) */
+  --err: var(--c-danger);
 }
 
 * { box-sizing: border-box; }
@@ -38,9 +59,9 @@ html, body {
 .ok { color: var(--ok); }
 .err { color: var(--err); }
 
-h1 { font-size: 24px; margin: 0 0 8px; }
-h2 { font-size: 17px; margin: 0 0 12px; }
-a { color: var(--accent); }
+h1 { font-size: 24px; margin: 0 0 8px; color: var(--heading); }
+h2 { font-size: 17px; margin: 0 0 12px; color: var(--heading); }
+a { color: var(--link); }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
 
 .container { max-width: 880px; }
@@ -50,10 +71,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 .header {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface);
+  padding: 12px 16px; background: var(--c-header); color: #fff;
 }
-.brand { font-weight: 700; color: var(--text); text-decoration: none; }
+.brand { font-weight: 700; color: #fff; text-decoration: none; }
 .nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
+.header .nav a, .header .nav .muted { color: #fff; }
+.header .nav .muted { opacity: 0.85; }
+.header .btn-ghost { color: #fff; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -63,6 +87,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #0f52e0; border-color: #0f52e0; }
 .btn-ghost { border-color: transparent; background: transparent; }
 .btn-danger { color: var(--err); }
 .btn-block { width: 100%; margin-top: 16px; }
@@ -100,22 +125,17 @@ tr.inactive td { color: var(--muted); }
 .form input[type="file"] { padding: 6px 0; border: none; background: none; }
 
 .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--border); color: var(--text); }
-.badge-draft { background: #e9ecef; color: #495057; }
-.badge-sent, .badge-in_progress { background: #e7f0ff; color: #1c4fd8; }
-.badge-completed { background: #e6f6ec; color: #1f7a45; }
-.badge-declined, .badge-canceled, .badge-expired { background: #fdecec; color: #b3261e; }
-@media (prefers-color-scheme: dark) {
-  .badge-draft { background: #2e2e33; color: #c9c9d1; }
-  .badge-sent, .badge-in_progress { background: #1d2b4f; color: #9db6ff; }
-  .badge-completed { background: #173524; color: #7ad3a0; }
-  .badge-declined, .badge-canceled, .badge-expired { background: #3d1c1c; color: #ff9a93; }
-}
+.badge-draft { background: var(--bg); color: var(--sub); box-shadow: inset 0 0 0 1px var(--border); }
+.badge-sent, .badge-in_progress { background: rgba(21, 96, 253, 0.1); color: var(--c-primary); }
+.badge-completed { background: rgba(47, 198, 115, 0.14); color: var(--ok); }
+.badge-expired { background: rgba(255, 160, 25, 0.16); color: var(--warn-text); }
+.badge-declined, .badge-canceled { background: rgba(211, 47, 47, 0.1); color: var(--err); }
 
 /* ---------- PDF ---------- */
 .pdf-pages { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .pdf-page-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.pdf-page-no { font-size: 12px; color: var(--muted); }
-.pdf-page { position: relative; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); }
+.pdf-page-no { font-size: 12px; color: var(--faint); }
+.pdf-page { position: relative; background: #fff; box-shadow: 0 1px 4px rgba(24, 26, 41, 0.16); }
 .pdf-page canvas { display: block; }
 .pdf-overlay { position: absolute; inset: 0; }
 
@@ -125,7 +145,7 @@ tr.inactive td { color: var(--muted); }
 }
 .field-box.selected { outline: 2px solid var(--text); outline-offset: 1px; z-index: 2; }
 .field-box.readonly { cursor: default; }
-.field-box-label { font-size: 11px; font-weight: 700; white-space: nowrap; pointer-events: none; padding: 0 2px; }
+.field-box-label { font-size: 11px; font-weight: 700; white-space: nowrap; pointer-events: none; padding: 0 2px; color: var(--heading); }
 .field-box-handle { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; cursor: nwse-resize; touch-action: none; }
 .field-box.readonly .field-box-handle { display: none; }
 
@@ -148,10 +168,10 @@ tr.inactive td { color: var(--muted); }
 .recipient-head { display: flex; justify-content: space-between; align-items: center; }
 .palette { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .panel p { margin: 0; }
-.send-panel { position: sticky; bottom: 0; box-shadow: 0 -6px 12px -6px rgba(0, 0, 0, 0.18); }
+.send-panel { position: sticky; bottom: 0; box-shadow: 0 -6px 12px -6px rgba(24, 26, 41, 0.18); }
 .placing-hint {
   position: sticky; top: 8px; z-index: 5; margin: 0 auto 12px; width: fit-content;
-  background: var(--accent); color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 14px;
+  background: var(--c-navy); color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 14px;
 }
 
 @media (max-width: 800px) {
@@ -168,26 +188,26 @@ tr.inactive td { color: var(--muted); }
 .sign-head h1 { margin-bottom: 4px; }
 .sign-message { white-space: pre-wrap; margin: 8px 0 0; font-size: 14px; }
 .sign-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.notice-bar { background: var(--surface); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 0; }
+.notice-bar { background: rgba(21, 96, 253, 0.06); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 0; }
 
 .sign-field {
-  position: absolute; border: 2px dashed #e6a700; background: rgba(255, 214, 0, 0.28); border-radius: 3px;
-  display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden; cursor: pointer; color: #111; font: inherit;
+  position: absolute; border: 2px dashed var(--c-warning); background: rgba(255, 160, 25, 0.18); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden; cursor: pointer; color: var(--text); font: inherit;
 }
-.sign-field.filled { border-style: solid; border-color: #2b8a3e; background: rgba(43, 138, 62, 0.08); }
+.sign-field.filled { border-style: solid; border-color: var(--c-success); background: rgba(47, 198, 115, 0.1); }
 .sign-field:disabled { cursor: default; }
 .sign-field:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-.sign-field-hint { font-size: 11px; font-weight: 700; color: #8a6400; white-space: nowrap; }
+.sign-field-hint { font-size: 11px; font-weight: 700; color: var(--warn-text); white-space: nowrap; }
 .sign-field-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
 .sign-field-img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-.dialog-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+.dialog-backdrop { position: fixed; inset: 0; background: rgba(24, 26, 41, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
 .dialog { background: var(--surface); border-radius: 10px; padding: 16px; width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 12px; }
 .dialog h2 { margin: 0; }
 .dialog input:not([type="file"]) { padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .upload { display: flex; flex-direction: column; gap: 4px; }
-.sigpad { border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.sigpad { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
 .sigpad-canvas { display: block; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
 .sigpad-foot { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; border-top: 1px dashed var(--border); }
 @media (max-width: 800px) {

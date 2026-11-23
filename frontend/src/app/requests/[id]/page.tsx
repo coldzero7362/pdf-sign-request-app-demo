@@ -254,7 +254,7 @@ function Detail() {
                         background: `${color}22`,
                       }}
                     >
-                      <span className="field-box-label" style={{ color }}>
+                      <span className="field-box-label">
                         {f.type === "CHECKBOX" ? "✓" : f.label || FIELD_LABEL[f.type]}
                       </span>
                     </div>

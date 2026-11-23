@@ -113,7 +113,7 @@ export const FIELD_DEFAULT_SIZE: Record<FieldType, { width: number; height: numb
 
 export const MIN_FIELD_SIZE = 8;
 
-/** 수신자 구분 색 (순서대로 돌려 쓴다) */
-export const RECIPIENT_COLORS = ["#2f5bea", "#d9480f", "#2b8a3e", "#ae3ec9", "#0b7285", "#e67700"];
+/** 수신자 구분 색 (순서대로 돌려 쓴다). 앞 네 가지는 USIGN 팔레트, 뒤는 5명 이상일 때 구분용 */
+export const RECIPIENT_COLORS = ["#1560FD", "#FFA019", "#2FC673", "#181A29", "#808087", "#0B7285"];
 
 export const fmtDate = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString("ko-KR") : "-");

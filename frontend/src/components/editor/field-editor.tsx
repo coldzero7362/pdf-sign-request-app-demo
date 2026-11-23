@@ -565,7 +565,7 @@ export function FieldEditor({ initial }: { initial: RequestDetail }) {
                       title={`${FIELD_LABEL[f.type]} · ${who?.name || who?.email || ""}`}
                       onPointerDown={(e) => startDrag(e, f, scale, "move")}
                     >
-                      <span className="field-box-label" style={{ color }}>
+                      <span className="field-box-label">
                         {f.type === "CHECKBOX" ? "✓" : f.label || FIELD_LABEL[f.type]}
                         {f.required && f.type !== "CHECKBOX" ? " *" : ""}
                       </span>

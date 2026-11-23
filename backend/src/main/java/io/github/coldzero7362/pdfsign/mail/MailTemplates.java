@@ -117,10 +117,10 @@ public class MailTemplates {
     }
 
     private static String layout(String body) {
-        return "<!doctype html><html><body style=\"margin:0;padding:24px;background:#f7f7f8;"
-            + "font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1c1c1e\">"
-            + "<div style=\"max-width:520px;margin:0 auto;background:#fff;border:1px solid #e3e3e6;border-radius:8px;padding:24px\">"
-            + "<p style=\"margin:0 0 16px;font-weight:700\">PDF 서명 요청</p>" + body + "</div></body></html>";
+        return "<!doctype html><html><body style=\"margin:0;padding:24px;background:#F2F5F8;"
+            + "font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#111111\">"
+            + "<div style=\"max-width:520px;margin:0 auto;background:#fff;border:1px solid #E2E7EA;border-radius:8px;padding:24px\">"
+            + "<p style=\"margin:0 0 16px;font-weight:700;color:#345BF8\">PDF 서명 요청</p>" + body + "</div></body></html>";
     }
 
     private static String p(String html) {
@@ -132,16 +132,16 @@ public class MailTemplates {
     }
 
     private static String row(String k, String v) {
-        return "<tr><td style=\"padding:4px 12px 4px 0;color:#6b6b72;vertical-align:top;white-space:nowrap\">" + k
+        return "<tr><td style=\"padding:4px 12px 4px 0;color:#555555;vertical-align:top;white-space:nowrap\">" + k
             + "</td><td style=\"padding:4px 0\">" + v + "</td></tr>";
     }
 
     private static String button(String href, String label) {
-        return "<p style=\"margin:20px 0\"><a href=\"" + esc(href) + "\" style=\"display:inline-block;background:#2f5bea;"
+        return "<p style=\"margin:20px 0\"><a href=\"" + esc(href) + "\" style=\"display:inline-block;background:#1560FD;"
             + "color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600\">" + label + "</a></p>";
     }
 
     private static String small(String html) {
-        return "<p style=\"margin:16px 0 0;font-size:12px;color:#6b6b72;line-height:1.5\">" + html + "</p>";
+        return "<p style=\"margin:16px 0 0;font-size:12px;color:#555555;line-height:1.5\">" + html + "</p>";
     }
 }

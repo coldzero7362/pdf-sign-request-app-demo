@@ -20,7 +20,7 @@ export function SignaturePad({ onChange }: { onChange: (blob: Blob | null) => vo
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.lineWidth = 2.5;
-    ctx.strokeStyle = "#111";
+    ctx.strokeStyle = "#111111"; // USIGN Text
   }, []);
 
   function point(e: React.PointerEvent) {
