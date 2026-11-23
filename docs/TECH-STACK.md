@@ -79,19 +79,32 @@
 
 ### Spring Boot
 - 보안 기본값은 **모두 차단**이고, 헬스 체크와 API 문서만 공개합니다.
+- 보안 체인 두 개:
+  - `/api/**`: 브라우저 세션 또는 `Bearer` API 토큰. 미인증은 401
+  - 나머지: Google 로그인 흐름, 로그아웃, API 문서
+- **Google 로그인**: OIDC(`openid profile email`)와 PKCE(S256)를 씁니다. 이메일이 인증된 Google 계정만 받습니다. 리디렉션 주소는 `APP_BASE_URL` 기준으로 고정해서, 프록시를 거쳐도 바뀌지 않게 했습니다.
+- **API 토큰(PAT)**
+  - `pst_` 접두사와 32바이트 난수로 만듭니다. 접두사가 있어 GitHub 비밀 스캐너 같은 도구가 알아보기 쉽습니다.
+  - DB에는 SHA-256 해시만 저장하고, 원문은 발급할 때 한 번만 보여 줍니다.
+  - 스코프(`requests:read`, `requests:write`), 만료(1~365일), 폐기, 마지막 사용 시각을 관리합니다. 사용 중인 토큰은 사용자당 최대 10개입니다.
+  - Spring Security의 opaque token 방식으로 검증합니다. 나중에 OAuth 인증 서버(JWT)를 붙이면 검증부만 바꾸면 됩니다.
+  - **토큰 발급과 폐기는 브라우저 세션에서만 가능합니다.** 토큰이 새면 그 토큰으로 다른 토큰을 만들어 피해를 키우는 일을 막기 위해서입니다.
+- **세션 쿠키**: `HttpOnly`, `SameSite=Lax`이고, HTTPS에서는 `Secure`가 붙습니다. 유효 시간은 8시간입니다.
+- **CSRF**: 쿠키로 인증하는 변경 요청은 `XSRF-TOKEN` 쿠키 값을 `X-XSRF-TOKEN` 헤더로 보내야 합니다 (`csrf().spa()`). `Bearer` 요청은 쿠키를 쓰지 않으므로 검사에서 빠집니다.
+- `forward-headers-strategy: native`: Caddy가 붙이는 `X-Forwarded-*`를 Tomcat 단계에서 반영합니다. Tomcat은 내부망(사설 IP) 프록시만 신뢰합니다.
 - JPA `ddl-auto: validate`: 스키마는 Flyway로만 바꾸고, Hibernate가 테이블을 고치지 못하게 합니다.
 - `open-in-view: false`: 화면 렌더링 중에 지연 로딩 쿼리가 나가지 않게 합니다.
 
 ### 컨테이너
 - 두 컨테이너 모두 root가 아닌 사용자로 실행합니다 (api는 `app`, web은 `node`).
 - 화면만 `127.0.0.1:8002`에 열고, api는 외부 포트 없이 내부 네트워크로만 접근합니다.
+- 외부 접속은 공용 Caddy가 HTTPS(Let's Encrypt)로 받습니다. 백엔드 경로는 api로, 나머지는 web으로 보냅니다. HSTS를 적용하고 `Server` 헤더를 숨기며, 요청 크기는 25MB로 제한합니다.
 - 비밀 값은 `.env`로만 넘기고 저장소와 이미지에는 넣지 않습니다.
 
 ### 다음 단계에서 붙일 것
 - Content-Security-Policy (nonce 방식)
-- 로그인 이후 세션 쿠키: `Secure`, `HttpOnly`, `SameSite=Lax`
-- CSRF 보호 (웹 체인), Bearer 토큰 체인은 stateless
-- 업로드 PDF 크기와 형식 검증, 요청 횟수 제한
+- 업로드 PDF 크기와 형식 검증
+- 요청 횟수 제한 (특히 수신자 OTP)
 
 ## 버전 관리 방침
 - `.github/dependabot.yml`로 Gradle, npm, Docker 이미지 업데이트를 매주 확인합니다.

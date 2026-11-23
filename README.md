@@ -28,6 +28,22 @@ curl http://127.0.0.1:8002/api/v1/health   # web이 api로 넘겨 줌
 
 DB는 공용 MariaDB의 `docsign` 스키마를 사용하므로, 먼저 `~/infra/db`가 실행 중이어야 합니다.
 
+## 접속
+
+- 서비스: https://pdfsign.158-247-240-171.sslip.io
+- API 문서: https://pdfsign.158-247-240-171.sslip.io/swagger-ui.html
+
+## API 토큰으로 호출하기
+
+1. 화면에서 Google로 로그인한 뒤 **API 토큰** 메뉴에서 토큰을 발급합니다. 원문은 발급할 때 한 번만 보입니다.
+2. 요청 헤더에 넣어 호출합니다.
+
+```bash
+curl -H "Authorization: Bearer pst_..." https://pdfsign.158-247-240-171.sslip.io/api/v1/me
+```
+
+토큰 발급과 폐기는 보안상 브라우저 로그인 상태에서만 할 수 있습니다.
+
 ## 개발
 
 ```bash

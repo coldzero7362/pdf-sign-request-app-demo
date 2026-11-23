@@ -3,3 +3,6 @@ spring:
     url: jdbc:h2:mem:test;MODE=MariaDB;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
     username: sa
     password:
+
+GOOGLE_CLIENT_ID: test-client-id
+GOOGLE_CLIENT_SECRET: test-client-secret
