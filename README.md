@@ -19,6 +19,7 @@ PDF에 입력 칸(텍스트, 날짜, 체크박스, 서명)을 지정해 외부 �
 | `docs/TECH-STACK.md` | 버전 선택 이유와 보안 설정 |
 | `docs/API.md` | API 사용 흐름, 좌표 규칙, 상태 |
 | `docs/GUIDELINES.md` | **업무 지침 (현재 구현보다 우선)** |
+| `docs/REDESIGN-PLAN.md` | 지침에 맞춘 재설계 계획 (데이터 모델, API, 화면, 작업 순서) |
 | `CLAUDE.md` | Claude Code가 자동으로 읽는 작업 안내 (지침·디자인 규칙 불러오기) |
 | `DESIGN.md` | 디자인 규칙 (USIGN 색 + Jobright 양식). UI 작업 전에 먼저 읽기 |
 | `docs/design/jobright-original.md` | `npx getdesign add jobright` 원본 (참고용) |
