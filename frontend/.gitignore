@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# pdf.js 워커 (빌드 시 복사)
+/public/pdf.worker.min.mjs
