@@ -19,8 +19,9 @@ type TokenView = {
 };
 
 const SCOPES = [
-  { value: "requests:read", label: "요청 조회" },
-  { value: "requests:write", label: "요청 생성·변경" },
+  { value: "templates:read", label: "템플릿 조회" },
+  { value: "requests:read", label: "문서 조회" },
+  { value: "requests:write", label: "서명 요청·회수·재발송" },
 ];
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("ko-KR") : "-");

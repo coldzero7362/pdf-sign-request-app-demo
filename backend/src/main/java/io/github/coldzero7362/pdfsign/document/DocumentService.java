@@ -33,6 +33,37 @@ public class DocumentService {
         this.clock = clock;
     }
 
+    /** 검사를 마치고 저장한 PDF. */
+    public record StoredPdf(String storageKey, String fileName, long sizeBytes, String sha256,
+                            List<DocumentPage> pages) {
+    }
+
+    /** PDF를 검사하고 저장소에 넣는다. 템플릿과 문서가 같이 쓴다. */
+    public StoredPdf store(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "파일이 비어 있습니다.");
+        }
+        if (file.getSize() > MAX_BYTES) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "파일은 20MB 이하만 올릴 수 있습니다.");
+        }
+        try {
+            byte[] content = file.getBytes();
+            List<DocumentPage> pages = inspector.inspect(content);
+            String key = storage.save(content, "pdf");
+            return new StoredPdf(key, safeFileName(file.getOriginalFilename()), content.length, sha256(content), pages);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    public InputStream openKey(String storageKey) {
+        try {
+            return storage.open(storageKey);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     @Transactional
     public Document upload(Long ownerId, MultipartFile file) {
         if (file == null || file.isEmpty()) {

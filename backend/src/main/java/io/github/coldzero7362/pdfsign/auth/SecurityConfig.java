@@ -38,6 +38,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/health").permitAll()
                 .requestMatchers("/api/v1/me/tokens", "/api/v1/me/tokens/**").hasAuthority(Authorities.SESSION)
+                // 템플릿: 조회는 templates:read, 만들기·수정·삭제는 웹 세션만 (지침 1)
+                .requestMatchers(HttpMethod.GET, "/api/v1/templates", "/api/v1/templates/**")
+                    .hasAuthority("SCOPE_" + Authorities.SCOPE_TEMPLATES_READ)
+                .requestMatchers("/api/v1/templates", "/api/v1/templates/**").hasAuthority(Authorities.SESSION)
                 // 문서와 요청: 조회는 requests:read, 변경은 requests:write (세션은 둘 다 가짐)
                 .requestMatchers(HttpMethod.GET, "/api/v1/documents/**", "/api/v1/requests/**")
                     .hasAuthority("SCOPE_" + Authorities.SCOPE_REQUESTS_READ)

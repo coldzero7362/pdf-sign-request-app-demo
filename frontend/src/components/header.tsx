@@ -26,15 +26,16 @@ export function Header({ me }: { me?: Me | null }) {
       {me && (
         <nav className="nav">
           <div id="nav-links" className={`nav-links ${open ? "open" : ""}`} onClick={() => setOpen(false)}>
-            <Link href="/">내 요청</Link>
+            <Link href="/">보낸 문서</Link>
+            <Link href="/templates">템플릿</Link>
             <Link href="/settings/tokens">API 토큰</Link>
             <span className="nav-user">{me.email}</span>
             <button type="button" className="btn btn-ghost btn-small" onClick={onLogout}>
               로그아웃
             </button>
           </div>
-          <Link href="/requests/new" className="btn btn-primary btn-small">
-            + 새 요청
+          <Link href="/templates/new" className="btn btn-primary btn-small">
+            + 새 템플릿
           </Link>
           <button
             type="button"

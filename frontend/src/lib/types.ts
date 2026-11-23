@@ -117,3 +117,77 @@ export const MIN_FIELD_SIZE = 8;
 export const RECIPIENT_COLORS = ["#1560FD", "#FFA019", "#2FC673", "#181A29", "#808087", "#0B7285"];
 
 export const fmtDate = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString("ko-KR") : "-");
+
+// ---------- 템플릿 (backend TemplateDtos) ----------
+
+export type SigningMode = "SEQUENTIAL" | "PARALLEL";
+export type TemplateFieldType = "SIGNATURE" | "DATE" | "TEXT" | "TEXT_FIXED" | "CHECKBOX";
+
+export type TemplateSlotView = { key: string; label: string; order: number; fieldCount: number };
+
+export type TemplateFieldView = {
+  id: string;
+  slotKey: string | null;
+  type: TemplateFieldType;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  required: boolean;
+  label: string | null;
+  fixedValue: string | null;
+};
+
+export type TemplateView = {
+  templateNo: string;
+  name: string;
+  signingMode: SigningMode;
+  defaultPeriodDays: number;
+  revision: number;
+  ready: boolean;
+  problems: string[];
+  pdf: { fileName: string; sizeBytes: number; sha256: string; pageCount: number; pages: PageView[] };
+  slots: TemplateSlotView[];
+  fields: TemplateFieldView[];
+  requestExample: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TemplateSummary = {
+  templateNo: string;
+  name: string;
+  signingMode: SigningMode;
+  defaultPeriodDays: number;
+  slotCount: number;
+  fieldCount: number;
+  ready: boolean;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const SIGNING_MODE_LABEL: Record<SigningMode, string> = {
+  SEQUENTIAL: "순차",
+  PARALLEL: "비순차",
+};
+
+export const TEMPLATE_FIELD_LABEL: Record<TemplateFieldType, string> = {
+  SIGNATURE: "서명",
+  TEXT: "텍스트",
+  DATE: "날짜",
+  CHECKBOX: "체크",
+  TEXT_FIXED: "고정 텍스트",
+};
+
+export const TEMPLATE_FIELD_SIZE: Record<TemplateFieldType, { width: number; height: number }> = {
+  SIGNATURE: { width: 150, height: 50 },
+  TEXT: { width: 160, height: 24 },
+  DATE: { width: 100, height: 24 },
+  CHECKBOX: { width: 16, height: 16 },
+  TEXT_FIXED: { width: 200, height: 24 },
+};
+
+/** 요청자 고정 텍스트 칸 색 (USIGN Muted) */
+export const FIXED_FIELD_COLOR = "#808087";

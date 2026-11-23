@@ -36,6 +36,9 @@ public class AppUser {
     @Column(name = "last_login_at", nullable = false)
     private Instant lastLoginAt;
 
+    @Column(name = "template_seq", nullable = false)
+    private int templateSeq;
+
     protected AppUser() {
     }
 
@@ -53,6 +56,11 @@ public class AppUser {
         this.email = email;
         this.name = name;
         this.lastLoginAt = now;
+    }
+
+    /** 다음 템플릿 순번. 호출 전에 이 행을 잠가야 한다 (AppUserRepository.lockById). */
+    public int nextTemplateSeq() {
+        return ++templateSeq;
     }
 
     public Long getId() { return id; }
