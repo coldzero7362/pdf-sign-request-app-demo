@@ -6,3 +6,6 @@ spring:
 
 GOOGLE_CLIENT_ID: test-client-id
 GOOGLE_CLIENT_SECRET: test-client-secret
+
+app:
+  storage-dir: ${java.io.tmpdir}/pdfsign-test-storage

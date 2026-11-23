@@ -17,6 +17,7 @@ PDF에 입력 칸(텍스트, 날짜, 체크박스, 서명)을 지정해 외부 �
 | `docker/web.Dockerfile` | 화면 이미지 (Next.js standalone) |
 | `docker-compose.yml` | `api` + `web` 컨테이너 (공용 MariaDB, Caddy 네트워크 사용) |
 | `docs/TECH-STACK.md` | 버전 선택 이유와 보안 설정 |
+| `docs/API.md` | API 사용 흐름, 좌표 규칙, 상태 |
 
 ## 실행
 
