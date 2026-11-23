@@ -1,6 +1,6 @@
 # web: Next.js 화면. /api 등 백엔드 경로는 rewrites로 api 컨테이너에 넘긴다.
 # api: Spring Boot. 공용 MariaDB(~/infra/db)에 'shared' 네트워크로 접속(호스트명 'db').
-# HTTPS는 공용 Caddy(~/infra/proxy)가 'proxy' 네트워크로 web에 연결한다.
+# HTTPS는 공용 Caddy(~/infra/proxy)가 'proxy' 네트워크로 연결한다. 백엔드 경로는 api로, 나머지는 web으로 보낸다.
 services:
   api:
     build:
@@ -12,7 +12,7 @@ services:
     env_file: .env
     volumes:
       - app-storage:/data/storage
-    networks: [default, shared]
+    networks: [default, shared, proxy]
 
   web:
     build:
