@@ -34,6 +34,16 @@ DB는 공용 MariaDB의 `docsign` 스키마를 사용하므로, 먼저 `~/infra/
 - 서비스: https://pdfsign.158-247-240-171.sslip.io
 - API 문서: https://pdfsign.158-247-240-171.sslip.io/swagger-ui.html
 
+## 화면
+
+| 경로 | 내용 |
+|---|---|
+| `/` | 내 요청 목록 |
+| `/requests/new` | PDF 올리기 |
+| `/requests/{id}/edit` | 칸 배치 편집기 (초안만). 수신자 추가, 칸 종류 선택 후 PDF 클릭으로 배치, 끌어서 이동, 오른쪽 아래 모서리로 크기 조절, Delete 키로 삭제. 변경은 자동 저장 |
+| `/requests/{id}` | 요청 상세, 수신자 상태, 감사 기록, 미리보기 |
+| `/settings/tokens` | API 토큰 |
+
 ## API 토큰으로 호출하기
 
 1. 화면에서 Google로 로그인한 뒤 **API 토큰** 메뉴에서 토큰을 발급합니다. 원문은 발급할 때 한 번만 보입니다.
