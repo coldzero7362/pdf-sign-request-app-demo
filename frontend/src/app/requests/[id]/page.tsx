@@ -137,7 +137,7 @@ function Detail() {
             </>
           )}
           {detail.status === "COMPLETED" && (
-            <a className="btn btn-primary" href={`/api/v1/requests/${id}/result`}>
+            <a className="btn btn-accent" href={`/api/v1/requests/${id}/result`}>
               완료본 내려받기
             </a>
           )}
