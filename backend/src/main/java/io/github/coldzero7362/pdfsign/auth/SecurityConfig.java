@@ -4,6 +4,7 @@ import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -33,6 +34,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/health").permitAll()
                 .requestMatchers("/api/v1/me/tokens", "/api/v1/me/tokens/**").hasAuthority(Authorities.SESSION)
+                // 문서와 요청: 조회는 requests:read, 변경은 requests:write (세션은 둘 다 가짐)
+                .requestMatchers(HttpMethod.GET, "/api/v1/documents/**", "/api/v1/requests/**")
+                    .hasAuthority("SCOPE_" + Authorities.SCOPE_REQUESTS_READ)
+                .requestMatchers("/api/v1/documents/**", "/api/v1/requests/**")
+                    .hasAuthority("SCOPE_" + Authorities.SCOPE_REQUESTS_WRITE)
                 .anyRequest().hasAuthority(Authorities.USER))
             .oauth2ResourceServer(rs -> rs.opaqueToken(ot -> ot.introspector(introspector)))
             .csrf(csrf -> csrf.spa());
