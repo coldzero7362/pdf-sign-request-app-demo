@@ -77,6 +77,7 @@ public final class RequestDtos {
     public record RequestDetail(UUID id, String title, String message, RequestStatus status,
                                 Instant expiresAt, Instant createdAt, Instant updatedAt,
                                 Instant sentAt, Instant completedAt, Instant canceledAt,
+                                Instant declinedAt, String resultSha256, Long resultSizeBytes,
                                 DocumentView document, List<RecipientView> recipients,
                                 List<FieldView> fields) {
     }

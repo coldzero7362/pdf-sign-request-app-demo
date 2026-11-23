@@ -24,6 +24,18 @@ spring:
             scope: openid,profile,email
             # 프록시 뒤에서도 항상 같은 주소를 쓰도록 고정 (Google 콘솔에 등록한 값과 같아야 함)
             redirect-uri: ${APP_BASE_URL:http://localhost:8080}/login/oauth2/code/{registrationId}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_APP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   mvc:
     problemdetails:
       enabled: true
@@ -39,6 +51,8 @@ server:
   servlet:
     session:
       timeout: 8h
+      # 세션 ID를 URL(;jsessionid=)에 붙이지 않는다. 주소 공유·기록·Referer로 새는 것을 막는다.
+      tracking-modes: cookie
       cookie:
         http-only: true
         same-site: lax
@@ -52,3 +66,8 @@ management:
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}
   storage-dir: ${APP_STORAGE_DIR:./storage}
+  mail:
+    # 비어 있으면 메일을 보내지 않고 로그에만 남긴다 (개발·테스트용)
+    from: ${MAIL_USERNAME:}
+    from-name: PDF 서명 요청
+    async: true

@@ -158,3 +158,39 @@ tr.inactive td { color: var(--muted); }
   .editor { grid-template-columns: 1fr; }
   .editor-side { position: static; max-height: none; }
 }
+
+/* ---------- 수신자 화면 ---------- */
+.narrow-sign { max-width: 480px; padding-top: 48px; }
+.otp-form { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.otp-form input { flex: 1; min-width: 140px; padding: 10px 12px; font-size: 20px; letter-spacing: 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.sign-layout { display: flex; flex-direction: column; gap: 12px; }
+.sign-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-start; position: sticky; top: 0; z-index: 10; }
+.sign-head h1 { margin-bottom: 4px; }
+.sign-message { white-space: pre-wrap; margin: 8px 0 0; font-size: 14px; }
+.sign-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.notice-bar { background: var(--surface); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 0; }
+
+.sign-field {
+  position: absolute; border: 2px dashed #e6a700; background: rgba(255, 214, 0, 0.28); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden; cursor: pointer; color: #111; font: inherit;
+}
+.sign-field.filled { border-style: solid; border-color: #2b8a3e; background: rgba(43, 138, 62, 0.08); }
+.sign-field:disabled { cursor: default; }
+.sign-field:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+.sign-field-hint { font-size: 11px; font-weight: 700; color: #8a6400; white-space: nowrap; }
+.sign-field-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+.sign-field-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+.dialog-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+.dialog { background: var(--surface); border-radius: 10px; padding: 16px; width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 12px; }
+.dialog h2 { margin: 0; }
+.dialog input:not([type="file"]) { padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.upload { display: flex; flex-direction: column; gap: 4px; }
+.sigpad { border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.sigpad-canvas { display: block; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
+.sigpad-foot { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; border-top: 1px dashed var(--border); }
+@media (max-width: 800px) {
+  /* 휴대폰에서는 상단 카드가 화면을 가리지 않게 고정을 푼다 */
+  .sign-head { position: static; }
+}

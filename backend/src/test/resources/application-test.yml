@@ -9,3 +9,9 @@ GOOGLE_CLIENT_SECRET: test-client-secret
 
 app:
   storage-dir: ${java.io.tmpdir}/pdfsign-test-storage
+  mail:
+    from: ""
+    async: false
+
+MAIL_USERNAME: ""
+MAIL_APP_PASSWORD: ""

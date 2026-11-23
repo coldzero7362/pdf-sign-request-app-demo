@@ -87,6 +87,25 @@ public class SignField {
         this.label = label;
     }
 
+    public void fillText(String value, Instant now) {
+        this.textValue = value;
+        this.fileKey = null;
+        this.filledAt = value == null ? null : now;
+    }
+
+    public void fillFile(String fileKey, Instant now) {
+        this.fileKey = fileKey;
+        this.textValue = null;
+        this.filledAt = now;
+    }
+
+    public boolean isFilled() {
+        if (type == FieldType.CHECKBOX) {
+            return "true".equals(textValue);
+        }
+        return filledAt != null && (fileKey != null || (textValue != null && !textValue.isBlank()));
+    }
+
     public Long getId() { return id; }
     public UUID getPublicId() { return publicId; }
     public Long getRequestId() { return requestId; }

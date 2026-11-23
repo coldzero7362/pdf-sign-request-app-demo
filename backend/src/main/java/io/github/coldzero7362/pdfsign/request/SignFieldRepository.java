@@ -9,6 +9,10 @@ public interface SignFieldRepository extends JpaRepository<SignField, Long> {
 
     List<SignField> findByRequestIdOrderByPageNoAscYAscXAsc(Long requestId);
 
+    List<SignField> findByRecipientIdOrderByPageNoAscYAscXAsc(Long recipientId);
+
+    java.util.Optional<SignField> findByPublicIdAndRecipientId(java.util.UUID publicId, Long recipientId);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from SignField f where f.requestId = :requestId")
     void deleteByRequestId(Long requestId);

@@ -1,14 +1,8 @@
 package io.github.coldzero7362.pdfsign.auth;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -30,7 +24,6 @@ public class ApiTokenService {
 
     private final ApiTokenRepository tokens;
     private final Clock clock;
-    private final SecureRandom random = new SecureRandom();
 
     public ApiTokenService(ApiTokenRepository tokens, Clock clock) {
         this.tokens = tokens;
@@ -57,9 +50,7 @@ public class ApiTokenService {
                 "사용 중인 토큰은 최대 " + MAX_ACTIVE_TOKENS + "개입니다. 안 쓰는 토큰을 폐기해 주세요.");
         }
 
-        byte[] bytes = new byte[32];
-        random.nextBytes(bytes);
-        String raw = TOKEN_PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        String raw = TOKEN_PREFIX + io.github.coldzero7362.pdfsign.common.Tokens.random();
         ApiToken token = new ApiToken(userId, name.strip(), raw.substring(0, 12), hash(raw),
             scopes, now, now.plus(Duration.ofDays(days)));
         return new Issued(tokens.save(token), raw);
@@ -93,11 +84,6 @@ public class ApiTokenService {
     }
 
     static String hash(String raw) {
-        try {
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(sha256.digest(raw.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
+        return io.github.coldzero7362.pdfsign.common.Tokens.sha256(raw);
     }
 }
