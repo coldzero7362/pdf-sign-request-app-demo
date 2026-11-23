@@ -25,13 +25,13 @@ export default function Home() {
         <>
           <div className="page-head">
             <div>
-              <h1>내 요청</h1>
+              <h1>보낸 문서</h1>
               <p className="lead" style={{ margin: 0 }}>
-                {me.name}님, PDF를 올리고 입력 칸을 배치해 서명을 요청하세요.
+                {me.name}님, 서명 요청은 API로 템플릿 번호와 수신자 정보를 보내면 됩니다.
               </p>
             </div>
-            <Link href="/requests/new" className="btn btn-primary btn-lg">
-              + 새 요청
+            <Link href="/templates" className="btn btn-primary btn-lg">
+              템플릿 관리
             </Link>
           </div>
           <div className="stats">
@@ -49,10 +49,10 @@ export default function Home() {
           {items === null && !error && <p className="muted">불러오는 중…</p>}
           {items?.length === 0 && (
             <section className="card card-feature empty">
-              <h2>아직 요청이 없습니다</h2>
-              <p className="muted">PDF를 올리고 입력 칸을 배치해 첫 서명 요청을 보내 보세요.</p>
-              <Link href="/requests/new" className="btn btn-accent">
-                첫 요청 만들기
+              <h2>아직 보낸 문서가 없습니다</h2>
+              <p className="muted">템플릿을 만들고, API 토큰으로 서명을 요청해 보세요.</p>
+              <Link href="/templates" className="btn btn-accent">
+                템플릿 만들기
               </Link>
             </section>
           )}

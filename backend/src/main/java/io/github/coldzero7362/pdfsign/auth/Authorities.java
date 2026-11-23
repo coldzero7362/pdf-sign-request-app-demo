@@ -16,11 +16,14 @@ public final class Authorities {
     /** API 토큰에 줄 수 있는 스코프. */
     public static final String SCOPE_REQUESTS_READ = "requests:read";
     public static final String SCOPE_REQUESTS_WRITE = "requests:write";
-    public static final Set<String> ALL_SCOPES = Set.of(SCOPE_REQUESTS_READ, SCOPE_REQUESTS_WRITE);
+    /** 템플릿 조회 (만들기·수정은 웹 세션 전용) */
+    public static final String SCOPE_TEMPLATES_READ = "templates:read";
+    public static final Set<String> ALL_SCOPES = Set.of(SCOPE_REQUESTS_READ, SCOPE_REQUESTS_WRITE, SCOPE_TEMPLATES_READ);
 
     /** 세션 사용자는 모든 스코프를 가진다. */
     public static final List<String> SESSION_AUTHORITIES = List.of(
-        USER, SESSION, "SCOPE_" + SCOPE_REQUESTS_READ, "SCOPE_" + SCOPE_REQUESTS_WRITE);
+        USER, SESSION, "SCOPE_" + SCOPE_REQUESTS_READ, "SCOPE_" + SCOPE_REQUESTS_WRITE,
+        "SCOPE_" + SCOPE_TEMPLATES_READ);
 
     private Authorities() {
     }

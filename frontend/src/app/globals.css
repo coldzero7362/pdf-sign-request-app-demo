@@ -300,3 +300,12 @@ tr.inactive td { color: var(--muted); }
   .card { padding: var(--s-md); border-radius: var(--r-md); }
   .card > .table-wrap { margin: 0 calc(-1 * var(--s-md)); }
 }
+
+/* ---------- 템플릿 편집기 ---------- */
+.segmented { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-full); padding: 3px; gap: 2px; background: var(--surface-soft); width: fit-content; }
+.segmented button { border: none; background: transparent; padding: 6px 16px; border-radius: var(--r-full); font: inherit; font-size: 14px; font-weight: 600; color: var(--sub); cursor: pointer; }
+.segmented button.on { background: var(--ink); color: #fff; }
+.code-block { margin: 0; padding: var(--s-sm); background: var(--ink); color: #e9ecff; border-radius: var(--r-sm); font-family: var(--font-mono); font-size: 12px; line-height: 1.5; overflow-x: auto; max-height: 260px; }
+.problems { margin: 0; padding-left: 18px; }
+.field-box.fixed { border-style: dashed; }
+.field-box.fixed .field-box-label { font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

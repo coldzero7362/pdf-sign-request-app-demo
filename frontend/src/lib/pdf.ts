@@ -25,10 +25,14 @@ export async function loadPdf(data: ArrayBuffer): Promise<PDFDocumentProxy> {
   return m.getDocument({ data, enableXfa: false, stopAtErrors: false }).promise;
 }
 
-export async function fetchPdf(documentId: string): Promise<PDFDocumentProxy> {
-  const res = await fetch(`/api/v1/documents/${documentId}/file`, { credentials: "same-origin" });
+export async function fetchPdfFrom(url: string): Promise<PDFDocumentProxy> {
+  const res = await fetch(url, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`PDF를 불러오지 못했습니다 (HTTP ${res.status})`);
   return loadPdf(await res.arrayBuffer());
+}
+
+export async function fetchPdf(documentId: string): Promise<PDFDocumentProxy> {
+  return fetchPdfFrom(`/api/v1/documents/${documentId}/file`);
 }
 
 /** 페이지를 캔버스에 그린다. scale은 CSS 픽셀/pt, 화면 선명도를 위해 devicePixelRatio를 곱한다. */
