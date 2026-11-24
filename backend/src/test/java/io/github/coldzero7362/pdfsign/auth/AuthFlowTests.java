@@ -79,18 +79,18 @@ class AuthFlowTests {
 
     @Test
     void issuedTokenAuthenticatesWithItsScopesOnly() throws Exception {
-        String token = issueToken("[\"requests:read\"]");
+        String token = issueToken("[\"documents:read\"]");
 
         mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.authType").value("token"))
-            .andExpect(jsonPath("$.scopes[0]").value("requests:read"))
+            .andExpect(jsonPath("$.scopes[0]").value("documents:read"))
             .andExpect(jsonPath("$.scopes.length()").value(1));
     }
 
     @Test
     void tokenCannotManageTokens() throws Exception {
-        String token = issueToken("[\"requests:read\",\"requests:write\"]");
+        String token = issueToken("[\"documents:read\",\"documents:write\"]");
 
         mvc.perform(get("/api/v1/me/tokens").header("Authorization", "Bearer " + token))
             .andExpect(status().isForbidden());
@@ -98,7 +98,7 @@ class AuthFlowTests {
 
     @Test
     void revokedTokenIsRejected() throws Exception {
-        String token = issueToken("[\"requests:read\"]");
+        String token = issueToken("[\"documents:read\"]");
         String list = mvc.perform(get("/api/v1/me/tokens").with(session()))
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsString();
@@ -121,7 +121,7 @@ class AuthFlowTests {
     void sessionWriteWithoutCsrfIsForbidden() throws Exception {
         mvc.perform(post("/api/v1/me/tokens").with(session())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"x\",\"scopes\":[\"requests:read\"]}"))
+                .content("{\"name\":\"x\",\"scopes\":[\"documents:read\"]}"))
             .andExpect(status().isForbidden());
     }
 

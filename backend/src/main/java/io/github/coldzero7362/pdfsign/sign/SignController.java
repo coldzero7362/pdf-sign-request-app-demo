@@ -1,12 +1,10 @@
 package io.github.coldzero7362.pdfsign.sign;
 
-import io.github.coldzero7362.pdfsign.document.Document;
-import io.github.coldzero7362.pdfsign.document.DocumentService;
-import io.github.coldzero7362.pdfsign.request.ResultFiles;
-import io.github.coldzero7362.pdfsign.sign.SignDtos.DeclineRequest;
+import io.github.coldzero7362.pdfsign.document.ResultFiles;
+import io.github.coldzero7362.pdfsign.sign.SignDtos.RejectRequest;
 import io.github.coldzero7362.pdfsign.sign.SignDtos.FillRequest;
 import io.github.coldzero7362.pdfsign.sign.SignDtos.LinkInfo;
-import io.github.coldzero7362.pdfsign.sign.SignDtos.MyField;
+import io.github.coldzero7362.pdfsign.sign.SignDtos.SignField;
 import io.github.coldzero7362.pdfsign.sign.SignDtos.OtpSent;
 import io.github.coldzero7362.pdfsign.sign.SignDtos.SigningView;
 import io.github.coldzero7362.pdfsign.sign.SignDtos.TokenRequest;
@@ -45,14 +43,11 @@ public class SignController {
 
     private final SignAccessService access;
     private final SigningService signing;
-    private final DocumentService documents;
     private final ResultFiles resultFiles;
 
-    public SignController(SignAccessService access, SigningService signing, DocumentService documents,
-                          ResultFiles resultFiles) {
+    public SignController(SignAccessService access, SigningService signing, ResultFiles resultFiles) {
         this.access = access;
         this.signing = signing;
-        this.documents = documents;
         this.resultFiles = resultFiles;
     }
 
@@ -98,24 +93,18 @@ public class SignController {
     @Operation(summary = "원본 PDF")
     @GetMapping("/document")
     public ResponseEntity<InputStreamResource> document(HttpServletRequest http) {
-        Document doc = signing.document(http.getSession(false));
-        return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_PDF)
-            .contentLength(doc.getSizeBytes())
-            .header("Content-Security-Policy", "sandbox")
-            .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
-            .body(new InputStreamResource(documents.open(doc)));
+        return resultFiles.original(signing.document(http.getSession(false)));
     }
 
     @Operation(summary = "텍스트·날짜·체크 칸 채우기")
     @PutMapping("/fields/{id}")
-    public MyField fill(@PathVariable UUID id, @Valid @RequestBody FillRequest req, HttpServletRequest http) {
+    public SignField fill(@PathVariable UUID id, @Valid @RequestBody FillRequest req, HttpServletRequest http) {
         return signing.fillText(http.getSession(false), id, req.value());
     }
 
     @Operation(summary = "서명 칸에 이미지 올리기 (PNG/JPEG, 2MB 이하)")
     @PostMapping(path = "/fields/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public MyField image(@PathVariable UUID id, @RequestParam("file") MultipartFile file, HttpServletRequest http)
+    public SignField image(@PathVariable UUID id, @RequestParam("file") MultipartFile file, HttpServletRequest http)
             throws IOException {
         if (file.getSize() > ImageSanitizer.MAX_BYTES) {
             throw new org.springframework.web.server.ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -139,11 +128,11 @@ public class SignController {
         return signing.submit(http.getSession(false));
     }
 
-    @Operation(summary = "거절")
-    @PostMapping("/decline")
+    @Operation(summary = "반려", description = "후순위 서명자와 관계없이 문서가 즉시 종료된다 (지침 5).")
+    @PostMapping("/reject")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void decline(@Valid @RequestBody DeclineRequest req, HttpServletRequest http) {
-        signing.decline(http.getSession(false), req.reason());
+    public void reject(@Valid @RequestBody RejectRequest req, HttpServletRequest http) {
+        signing.reject(http.getSession(false), req.reason());
     }
 
     @Operation(summary = "완료본 PDF 내려받기")

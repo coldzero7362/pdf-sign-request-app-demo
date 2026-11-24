@@ -42,11 +42,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/templates", "/api/v1/templates/**")
                     .hasAuthority("SCOPE_" + Authorities.SCOPE_TEMPLATES_READ)
                 .requestMatchers("/api/v1/templates", "/api/v1/templates/**").hasAuthority(Authorities.SESSION)
-                // 문서와 요청: 조회는 requests:read, 변경은 requests:write (세션은 둘 다 가짐)
-                .requestMatchers(HttpMethod.GET, "/api/v1/documents/**", "/api/v1/requests/**")
-                    .hasAuthority("SCOPE_" + Authorities.SCOPE_REQUESTS_READ)
-                .requestMatchers("/api/v1/documents/**", "/api/v1/requests/**")
-                    .hasAuthority("SCOPE_" + Authorities.SCOPE_REQUESTS_WRITE)
+                // 요청 메일 다시 보내기는 웹 전용 (지침 19)
+                .requestMatchers("/api/v1/documents/*/recipients/*/remind").hasAuthority(Authorities.SESSION)
+                // 문서: 조회는 documents:read, 서명 요청·회수·재발송은 documents:write
+                .requestMatchers(HttpMethod.GET, "/api/v1/documents", "/api/v1/documents/**")
+                    .hasAuthority("SCOPE_" + Authorities.SCOPE_DOCUMENTS_READ)
+                .requestMatchers("/api/v1/documents", "/api/v1/documents/**")
+                    .hasAuthority("SCOPE_" + Authorities.SCOPE_DOCUMENTS_WRITE)
                 .anyRequest().hasAuthority(Authorities.USER))
             .oauth2ResourceServer(rs -> rs.opaqueToken(ot -> ot.introspector(introspector)))
             .csrf(csrf -> csrf.spa());

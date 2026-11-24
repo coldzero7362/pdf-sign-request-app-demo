@@ -12,26 +12,30 @@ export type DocumentView = {
   createdAt: string;
 };
 
-export type RequestStatus = "DRAFT" | "SENT" | "IN_PROGRESS" | "COMPLETED" | "DECLINED" | "CANCELED" | "EXPIRED";
-export type RecipientRole = "SIGNER" | "VIEWER";
-export type RecipientStatus = "PENDING" | "SENT" | "VIEWED" | "COMPLETED" | "DECLINED";
-export type FieldType = "TEXT" | "DATE" | "CHECKBOX" | "SIGNATURE";
+export type DocumentStatus = "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "RECALLED" | "EXPIRED";
+export type RecipientStatus = "WAITING" | "REQUESTED" | "VIEWED" | "SIGNED" | "REJECTED" | "NOTIFIED";
+export type RecipientRole = "SIGNER" | "VIEWER" | "OWNER";
+export type FieldType = "TEXT" | "DATE" | "CHECKBOX" | "SIGNATURE" | "TEXT_FIXED";
 
 export type RecipientView = {
   id: string;
+  role: RecipientRole;
+  slot: string | null;
+  slotLabel: string | null;
+  order: number;
   email: string;
   name: string;
-  role: RecipientRole;
   status: RecipientStatus;
-  order: number;
-  completedAt: string | null;
-  declinedAt: string | null;
-  declineReason: string | null;
+  requestedAt: string | null;
+  viewedAt: string | null;
+  signedAt: string | null;
+  rejectedAt: string | null;
+  rejectReason: string | null;
 };
 
-export type FieldView = {
+export type DocumentFieldView = {
   id: string;
-  recipientId: string;
+  slot: string | null;
   type: FieldType;
   page: number;
   x: number;
@@ -40,60 +44,91 @@ export type FieldView = {
   height: number;
   required: boolean;
   label: string | null;
-  textValue: string | null;
+  fixedValue: string | null;
+  value: string | null;
   hasFile: boolean;
   filledAt: string | null;
 };
 
-export type RequestDetail = {
+export type AuditView = { at: string; type: string; actor: string; detail: string | null; ip: string | null; relatedDocumentId: string | null };
+
+export type LinkedDocument = { id: string; title: string; status: DocumentStatus; relation: "PREVIOUS" | "NEXT" };
+
+export type DocumentDetail = {
   id: string;
   title: string;
   message: string | null;
-  status: RequestStatus;
-  expiresAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  sentAt: string | null;
+  status: DocumentStatus;
+  templateNo: string;
+  templateRevision: number;
+  signingMode: "SEQUENTIAL" | "PARALLEL";
+  periodDays: number;
+  sentAt: string;
+  expiresAt: string;
   completedAt: string | null;
-  canceledAt: string | null;
-  declinedAt: string | null;
+  rejectedAt: string | null;
+  recalledAt: string | null;
+  expiredAt: string | null;
+  hiddenAt: string | null;
+  pdfFileName: string;
+  pageCount: number;
+  pages: PageView[];
   resultSha256: string | null;
   resultSizeBytes: number | null;
-  document: DocumentView;
-  recipients: RecipientView[];
-  fields: FieldView[];
+  signers: RecipientView[];
+  viewers: RecipientView[];
+  fields: DocumentFieldView[];
+  audit: AuditView[];
+  linked: LinkedDocument[];
+  canRecall: boolean;
 };
 
-export type RequestSummary = {
+export type DocumentSummary = {
   id: string;
   title: string;
-  status: RequestStatus;
-  documentName: string;
+  status: DocumentStatus;
+  templateNo: string;
+  signingMode: "SEQUENTIAL" | "PARALLEL";
   signerCount: number;
-  completedCount: number;
-  createdAt: string;
-  sentAt: string | null;
-  expiresAt: string | null;
+  signedCount: number;
+  currentSigner: string | null;
+  sentAt: string;
+  expiresAt: string;
+  completedAt: string | null;
+  hidden: boolean;
 };
 
-export type AuditView = { at: string; type: string; actor: string; detail: string | null; ip: string | null };
-
-export const STATUS_LABEL: Record<RequestStatus, string> = {
-  DRAFT: "작성 중",
-  SENT: "발송됨",
+export const STATUS_LABEL: Record<DocumentStatus, string> = {
   IN_PROGRESS: "진행 중",
   COMPLETED: "완료",
-  DECLINED: "거절됨",
-  CANCELED: "취소됨",
-  EXPIRED: "만료됨",
+  REJECTED: "반려",
+  RECALLED: "회수",
+  EXPIRED: "만료",
 };
 
 export const RECIPIENT_STATUS_LABEL: Record<RecipientStatus, string> = {
-  PENDING: "대기",
-  SENT: "발송됨",
+  WAITING: "차례 대기",
+  REQUESTED: "요청됨",
   VIEWED: "열람함",
-  COMPLETED: "완료",
-  DECLINED: "거절",
+  SIGNED: "서명 완료",
+  REJECTED: "반려",
+  NOTIFIED: "완료본 받음",
+};
+
+export const AUDIT_LABEL: Record<string, string> = {
+  SENT: "발송",
+  REQUESTED: "서명 요청 메일",
+  REMINDED: "요청 메일 다시 보냄",
+  OTP_SENT: "인증번호 발송",
+  OTP_VERIFIED: "본인 확인",
+  OTP_FAILED: "인증 실패",
+  VIEWED: "문서 열람",
+  SIGNED: "서명 완료",
+  REJECTED: "반려",
+  RECALLED: "회수",
+  EXPIRED: "만료",
+  COMPLETED: "전체 완료",
+  RESULT_SENT: "완료 링크 발송",
 };
 
 export const FIELD_LABEL: Record<FieldType, string> = {
@@ -101,14 +136,7 @@ export const FIELD_LABEL: Record<FieldType, string> = {
   DATE: "날짜",
   CHECKBOX: "체크",
   SIGNATURE: "서명",
-};
-
-/** 칸 종류별 기본 크기 (pt) */
-export const FIELD_DEFAULT_SIZE: Record<FieldType, { width: number; height: number }> = {
-  TEXT: { width: 160, height: 24 },
-  DATE: { width: 100, height: 24 },
-  CHECKBOX: { width: 16, height: 16 },
-  SIGNATURE: { width: 150, height: 50 },
+  TEXT_FIXED: "고정 텍스트",
 };
 
 export const MIN_FIELD_SIZE = 8;

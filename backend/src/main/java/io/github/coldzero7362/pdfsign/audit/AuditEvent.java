@@ -16,11 +16,15 @@ public class AuditEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "request_id", nullable = false)
-    private Long requestId;
+    @Column(name = "document_id", nullable = false)
+    private Long documentId;
 
     @Column(name = "recipient_id")
     private Long recipientId;
+
+    /** 재발송으로 이어진 문서 (지침 13) */
+    @Column(name = "related_document_id")
+    private Long relatedDocumentId;
 
     @Column(nullable = false)
     private String actor;
@@ -43,10 +47,11 @@ public class AuditEvent {
     protected AuditEvent() {
     }
 
-    public AuditEvent(Long requestId, Long recipientId, String actor, String eventType, String detail,
-                      String ip, String userAgent, Instant createdAt) {
-        this.requestId = requestId;
+    public AuditEvent(Long documentId, Long recipientId, Long relatedDocumentId, String actor, String eventType,
+                      String detail, String ip, String userAgent, Instant createdAt) {
+        this.documentId = documentId;
         this.recipientId = recipientId;
+        this.relatedDocumentId = relatedDocumentId;
         this.actor = actor;
         this.eventType = eventType;
         this.detail = detail;
@@ -56,7 +61,8 @@ public class AuditEvent {
     }
 
     public Long getId() { return id; }
-    public Long getRequestId() { return requestId; }
+    public Long getDocumentId() { return documentId; }
+    public Long getRelatedDocumentId() { return relatedDocumentId; }
     public Long getRecipientId() { return recipientId; }
     public String getActor() { return actor; }
     public String getEventType() { return eventType; }

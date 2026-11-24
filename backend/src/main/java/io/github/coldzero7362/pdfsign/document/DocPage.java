@@ -3,9 +3,8 @@ package io.github.coldzero7362.pdfsign.document;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
-/** 페이지 크기 (PDF 포인트, 회전 반영 후 화면에 보이는 방향). */
 @Embeddable
-public class DocumentPage {
+public class DocPage {
 
     @Column(name = "page_no", nullable = false)
     private int pageNo;
@@ -19,10 +18,10 @@ public class DocumentPage {
     @Column(nullable = false)
     private int rotation;
 
-    protected DocumentPage() {
+    protected DocPage() {
     }
 
-    public DocumentPage(int pageNo, double width, double height, int rotation) {
+    public DocPage(int pageNo, double width, double height, int rotation) {
         this.pageNo = pageNo;
         this.width = width;
         this.height = height;

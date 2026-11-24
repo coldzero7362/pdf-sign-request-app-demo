@@ -6,7 +6,7 @@ import { PdfPages } from "@/components/pdf-pages";
 import { SignaturePad } from "@/components/sign/signature-pad";
 import { api } from "@/lib/api";
 import { loadPdf, type PDFDocumentProxy } from "@/lib/pdf";
-import { FIELD_LABEL, fmtDate, type FieldType, type PageView, type RequestStatus } from "@/lib/types";
+import { FIELD_LABEL, fmtDate, type DocumentStatus, type FieldType, type PageView } from "@/lib/types";
 
 // ---------- API 형식 (backend SignDtos) ----------
 
@@ -14,8 +14,8 @@ type LinkInfo = {
   title: string;
   senderName: string;
   maskedEmail: string;
-  role: "SIGNER" | "VIEWER";
-  requestStatus: RequestStatus;
+  role: "SIGNER" | "VIEWER" | "OWNER";
+  documentStatus: DocumentStatus;
   verified: boolean;
 };
 
@@ -32,6 +32,7 @@ type MyField = {
   value: string | null;
   hasImage: boolean;
   filled: boolean;
+  editable: boolean;
 };
 
 type SigningView = {
@@ -39,12 +40,13 @@ type SigningView = {
   message: string | null;
   senderName: string;
   senderEmail: string;
-  requestStatus: RequestStatus;
+  documentStatus: DocumentStatus;
   expiresAt: string | null;
   recipientName: string;
   recipientEmail: string;
-  role: "SIGNER" | "VIEWER";
-  recipientStatus: "PENDING" | "SENT" | "VIEWED" | "COMPLETED" | "DECLINED";
+  role: "SIGNER" | "VIEWER" | "OWNER";
+  recipientStatus: "WAITING" | "REQUESTED" | "VIEWED" | "SIGNED" | "REJECTED" | "NOTIFIED";
+  slotLabel: string | null;
   canEdit: boolean;
   resultAvailable: boolean;
   documentName: string;
@@ -52,7 +54,7 @@ type SigningView = {
   fields: MyField[];
 };
 
-type Stage = "loading" | "otp" | "ready" | "declined" | "closed";
+type Stage = "loading" | "otp" | "ready" | "rejected" | "closed";
 
 export default function SignPage() {
   return (
@@ -105,12 +107,12 @@ function SignPageInner() {
         )}
         {stage === "otp" && info && <OtpStep token={token} info={info} onVerified={loadView} />}
         {stage === "ready" && view && (
-          <Signing view={view} setView={setView} onDeclined={() => setStage("declined")} />
+          <Signing view={view} setView={setView} onRejected={() => setStage("rejected")} />
         )}
-        {stage === "declined" && (
+        {stage === "rejected" && (
           <section className="card">
-            <h1>요청을 거절했습니다</h1>
-            <p className="muted">요청자에게 알렸습니다. 이 창을 닫으셔도 됩니다.</p>
+            <h1>문서를 반려했습니다</h1>
+            <p className="muted">서명이 종료되었고 요청자에게 알렸습니다. 이 창을 닫으셔도 됩니다.</p>
           </section>
         )}
       </main>
@@ -160,7 +162,7 @@ function OtpStep({ token, info, onVerified }: { token: string; info: LinkInfo; o
     }
   }
 
-  const done = info.requestStatus === "COMPLETED";
+  const done = info.documentStatus === "COMPLETED";
 
   return (
     <section className="card">
@@ -209,11 +211,11 @@ function OtpStep({ token, info, onVerified }: { token: string; info: LinkInfo; o
 function Signing({
   view,
   setView,
-  onDeclined,
+  onRejected,
 }: {
   view: SigningView;
   setView: (v: SigningView) => void;
-  onDeclined: () => void;
+  onRejected: () => void;
 }) {
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [editing, setEditing] = useState<MyField | null>(null);
@@ -295,7 +297,7 @@ function Signing({
   }
 
   function onFieldClick(f: MyField) {
-    if (!view.canEdit) return;
+    if (!view.canEdit || !f.editable) return;
     if (f.type === "CHECKBOX") {
       void saveValue(f, f.value === "true" ? "false" : "true");
       return;
@@ -316,22 +318,22 @@ function Signing({
     }
   }
 
-  async function decline() {
-    const reason = prompt("거절 사유를 적어 주세요 (선택). 거절하면 이 요청은 종료됩니다.");
+  async function reject() {
+    const reason = prompt("반려 사유를 적어 주세요 (선택). 반려하면 다른 서명자와 관계없이 문서가 바로 종료됩니다.");
     if (reason === null) return;
     setBusy(true);
     try {
-      await api<void>("/sign/api/decline", { method: "POST", json: { reason } });
-      onDeclined();
+      await api<void>("/sign/api/reject", { method: "POST", json: { reason } });
+      onRejected();
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
     }
   }
 
-  const required = view.fields.filter((f) => f.required);
+  const required = view.fields.filter((f) => f.editable && f.required);
   const filledRequired = required.filter((f) => f.filled).length;
-  const submitted = view.recipientStatus === "COMPLETED";
+  const submitted = view.recipientStatus === "SIGNED";
 
   return (
     <div className="sign-layout">
@@ -339,7 +341,7 @@ function Signing({
         <div>
           <h1>{view.title}</h1>
           <p className="muted small">
-            요청자 {view.senderName} ({view.senderEmail}) · {view.documentName}
+            요청자 {view.senderName} ({view.senderEmail}){view.slotLabel ? ` · ${view.slotLabel}` : ""} · {view.documentName}
             {view.expiresAt ? ` · 기한 ${fmtDate(view.expiresAt)}` : ""}
           </p>
           {view.message && <p className="sign-message">{view.message}</p>}
@@ -360,8 +362,8 @@ function Signing({
               <button type="button" className="btn btn-accent" onClick={submit} disabled={busy || filledRequired < required.length}>
                 제출
               </button>
-              <button type="button" className="btn btn-danger" onClick={decline} disabled={busy}>
-                거절
+              <button type="button" className="btn btn-danger" onClick={reject} disabled={busy}>
+                반려
               </button>
             </>
           )}
@@ -369,9 +371,9 @@ function Signing({
       </section>
 
       {submitted && !view.resultAvailable && (
-        <p className="notice-bar">제출했습니다. 다른 참여자가 모두 마치면 완료된 문서를 메일로 보내 드립니다.</p>
+        <p className="notice-bar">서명을 마쳤습니다. 다른 서명자가 모두 마치면 완료된 문서 링크를 메일로 보내 드립니다.</p>
       )}
-      {view.role === "VIEWER" && !view.resultAvailable && <p className="notice-bar">문서가 완료되면 내려받을 수 있습니다.</p>}
+      {view.role !== "SIGNER" && !view.resultAvailable && <p className="notice-bar">문서가 완료되면 내려받을 수 있습니다.</p>}
       {view.canEdit && <p className="muted small">주황색 칸을 눌러 작성하세요. 체크 칸은 누를 때마다 바뀝니다.</p>}
       {error && <p className="err">{error}</p>}
 
@@ -387,10 +389,10 @@ function Signing({
                 <button
                   type="button"
                   key={f.id}
-                  className={`sign-field ${f.filled ? "filled" : ""} ${f.required ? "required" : ""}`}
+                  className={`sign-field ${!f.editable ? "fixed" : f.filled ? "filled" : ""} ${f.required ? "required" : ""}`}
                   style={{ left: f.x * scale, top: f.y * scale, width: f.width * scale, height: f.height * scale }}
                   onClick={() => onFieldClick(f)}
-                  disabled={!view.canEdit}
+                  disabled={!view.canEdit || !f.editable}
                   aria-label={`${f.label || FIELD_LABEL[f.type]}${f.required ? " (필수)" : ""}`}
                 >
                   <FieldContent f={f} scale={scale} image={images[f.id]} />
@@ -421,7 +423,7 @@ function FieldContent({ f, scale, image }: { f: MyField; scale: number; image?: 
   if (f.type === "CHECKBOX") {
     return <span style={{ fontSize: f.height * scale * 0.8 }}>{f.value === "true" ? "✓" : ""}</span>;
   }
-  if (f.filled && f.value) {
+  if (!f.editable || (f.filled && f.value)) {
     return (
       <span className="sign-field-text" style={{ fontSize: Math.min(f.height * scale * 0.6, 16) }}>
         {f.value}

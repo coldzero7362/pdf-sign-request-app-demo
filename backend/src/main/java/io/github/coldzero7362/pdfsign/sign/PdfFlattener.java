@@ -1,10 +1,12 @@
 package io.github.coldzero7362.pdfsign.sign;
 
 import io.github.coldzero7362.pdfsign.audit.AuditEvent;
-import io.github.coldzero7362.pdfsign.request.FieldType;
-import io.github.coldzero7362.pdfsign.request.Recipient;
-import io.github.coldzero7362.pdfsign.request.SignField;
-import io.github.coldzero7362.pdfsign.request.SignRequest;
+import io.github.coldzero7362.pdfsign.document.Document;
+import io.github.coldzero7362.pdfsign.document.DocumentField;
+import io.github.coldzero7362.pdfsign.document.Recipient;
+import io.github.coldzero7362.pdfsign.document.RecipientRole;
+import io.github.coldzero7362.pdfsign.document.RecipientStatus;
+import io.github.coldzero7362.pdfsign.template.SigningMode;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,7 +15,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.IOUtils;
@@ -41,8 +42,7 @@ public class PdfFlattener {
         .withZone(ZoneId.of("Asia/Seoul"));
     private static final String FONT = "/fonts/NanumGothic-Regular.ttf";
 
-    public record Input(SignRequest request, String documentName, String documentSha256, byte[] original,
-                        List<Recipient> recipients, List<SignField> fields,
+    public record Input(Document document, byte[] original, List<Recipient> recipients, List<DocumentField> fields,
                         Function<String, byte[]> fileReader, List<AuditEvent> audit) {
     }
 
@@ -54,7 +54,7 @@ public class PdfFlattener {
             }
             PDFont font = PDType0Font.load(doc, fontStream, true);
 
-            for (SignField f : in.fields()) {
+            for (DocumentField f : in.fields()) {
                 if (!f.isFilled()) {
                     continue;
                 }
@@ -69,7 +69,7 @@ public class PdfFlattener {
                     float w = (float) f.getWidth();
                     float h = (float) f.getHeight();
                     switch (f.getType()) {
-                        case TEXT, DATE -> drawText(cs, font, f.getTextValue(), x, yBottom, w, h);
+                        case TEXT, DATE, TEXT_FIXED -> drawText(cs, font, f.textToDraw(), x, yBottom, w, h);
                         case CHECKBOX -> drawCheck(cs, x, yBottom, w, h);
                         case SIGNATURE -> drawImage(doc, cs, in.fileReader().apply(f.getFileKey()), x, yBottom, w, h);
                     }
@@ -177,24 +177,31 @@ public class PdfFlattener {
         List<String> lines = new ArrayList<>();
         lines.add("§감사 기록 (Audit Trail)");
         lines.add("");
-        lines.add("요청: " + in.request().getTitle());
-        lines.add("요청 ID: " + in.request().getPublicId());
-        lines.add("원본 문서: " + in.documentName());
-        lines.add("원본 SHA-256: " + in.documentSha256());
+        Document d = in.document();
+        lines.add("문서: " + d.getTitle());
+        lines.add("문서 ID: " + d.getPublicId());
+        lines.add("템플릿: " + d.getTemplateNo() + " (" + d.getTemplateRevision() + "판) · 서명 순서: "
+            + (d.getSigningMode() == SigningMode.SEQUENTIAL ? "순차" : "비순차"));
+        lines.add("원본 문서: " + d.getPdfFileName());
+        lines.add("원본 SHA-256: " + d.getPdfSha256());
         lines.add("");
-        lines.add("§참여자");
+        lines.add("§서명자");
         for (Recipient r : in.recipients()) {
-            String state = switch (r.getStatus()) {
-                case COMPLETED -> "완료 " + KST.format(r.getCompletedAt());
-                case DECLINED -> "거절";
-                default -> r.isSigner() ? "미완료" : "열람자";
-            };
-            lines.add("- " + r.getName() + " <" + r.getEmail() + "> · " + (r.isSigner() ? "서명자" : "열람자") + " · " + state);
+            if (!r.isSigner()) {
+                continue;
+            }
+            String state = r.getStatus() == RecipientStatus.SIGNED ? "서명 " + KST.format(r.getSignedAt()) : "미완료";
+            lines.add("- " + r.getOrderNo() + ". " + r.getSlotLabel() + " · " + r.getName() + " <" + r.getEmail()
+                + "> · " + state);
+        }
+        List<Recipient> viewers = in.recipients().stream().filter(r -> r.getRole() == RecipientRole.VIEWER).toList();
+        if (!viewers.isEmpty()) {
+            lines.add("");
+            lines.add("§참조자");
+            viewers.forEach(r -> lines.add("- " + r.getName() + " <" + r.getEmail() + ">"));
         }
         lines.add("");
         lines.add("§기록");
-        Map<Long, Recipient> byId = new java.util.HashMap<>();
-        in.recipients().forEach(r -> byId.put(r.getId(), r));
         for (AuditEvent e : in.audit()) {
             StringBuilder sb = new StringBuilder()
                 .append(KST.format(e.getCreatedAt())).append("  ")
@@ -276,17 +283,17 @@ public class PdfFlattener {
 
     private static String eventLabel(String type) {
         return switch (type) {
-            case "CREATED" -> "요청 생성";
             case "SENT" -> "발송";
+            case "REQUESTED" -> "서명 요청 메일";
+            case "REMINDED" -> "요청 메일 다시 보냄";
             case "OTP_SENT" -> "인증번호 발송";
             case "OTP_VERIFIED" -> "본인 확인";
             case "OTP_FAILED" -> "인증 실패";
             case "VIEWED" -> "문서 열람";
-            case "SUBMITTED" -> "작성 완료";
-            case "DECLINED" -> "거절";
+            case "SIGNED" -> "서명 완료";
+            case "REJECTED" -> "반려";
             case "COMPLETED" -> "전체 완료";
-            case "CANCELED" -> "취소";
-            case "MAIL_RESENT" -> "메일 재발송";
+            case "RECALLED" -> "회수";
             case "EXPIRED" -> "만료";
             default -> type;
         };

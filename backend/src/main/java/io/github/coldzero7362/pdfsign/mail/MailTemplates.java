@@ -27,7 +27,7 @@ public class MailTemplates {
     }
 
     public String dashboardLink(String requestPublicId) {
-        return baseUrl + "/requests/" + requestPublicId;
+        return baseUrl + "/documents/" + requestPublicId;
     }
 
     public MailMessage invitation(String to, String recipientName, String senderName, String senderEmail,
@@ -69,38 +69,32 @@ public class MailTemplates {
 
     public MailMessage completedToRecipient(String to, String name, String title, String link) {
         String subject = "[완료] " + oneLine(title);
-        String text = name + "님, 모든 참여자가 작성을 마쳐 문서가 완료되었습니다.\n\n"
-            + "아래 링크에서 완료된 PDF를 내려받을 수 있습니다 (인증번호 확인 후).\n" + link + "\n";
+        String text = name + "님, 모든 서명자가 서명을 마쳐 문서가 완료되었습니다.\n\n"
+            + "아래 링크에서 완료된 PDF를 내려받을 수 있습니다 (인증번호 확인 후, 30일 동안).\n" + link + "\n";
         String html = layout(
-            p(esc(name) + "님, 모든 참여자가 작성을 마쳐 문서 <b>" + esc(title) + "</b>가 완료되었습니다.")
+            p(esc(name) + "님, 모든 서명자가 서명을 마쳐 문서 <b>" + esc(title) + "</b>가 완료되었습니다.")
             + button(link, "완료된 문서 받기")
-            + small("링크를 열고 인증번호를 확인하면 내려받을 수 있습니다."));
+            + small("링크를 열고 인증번호를 확인하면 내려받을 수 있습니다. 링크는 30일 동안 쓸 수 있습니다."));
         return new MailMessage(to, subject, text, html);
     }
 
-    public MailMessage completedToOwner(String to, String title, String link) {
-        String subject = "[완료] " + oneLine(title);
-        String text = "요청한 문서 '" + title + "'의 작성이 모두 끝났습니다.\n" + link + "\n";
-        String html = layout(p("요청한 문서 <b>" + esc(title) + "</b>의 작성이 모두 끝났습니다.")
-            + button(link, "요청 보기"));
-        return new MailMessage(to, subject, text, html);
-    }
-
-    public MailMessage declinedToOwner(String to, String title, String who, String reason, String link) {
-        String subject = "[거절] " + oneLine(title);
-        String text = who + "님이 '" + title + "' 요청을 거절했습니다.\n"
-            + (reason != null ? "사유: " + reason + "\n" : "") + link + "\n";
-        String html = layout(p("<b>" + esc(who) + "</b>님이 <b>" + esc(title) + "</b> 요청을 거절했습니다.")
+    /** 반려 알림. 요청자에게는 상세 화면 링크를, 다른 서명자에게는 링크 없이 보낸다 (지침 5). */
+    public MailMessage rejected(String to, String title, String who, String reason, String linkOrNull) {
+        String subject = "[반려] " + oneLine(title);
+        String text = who + "님이 '" + title + "' 문서를 반려해 서명이 종료되었습니다.\n"
+            + (reason != null ? "사유: " + reason + "\n" : "") + (linkOrNull != null ? linkOrNull + "\n" : "");
+        String html = layout(p("<b>" + esc(who) + "</b>님이 <b>" + esc(title) + "</b> 문서를 반려해 서명이 종료되었습니다.")
             + (reason != null ? table(row("사유", esc(reason).replace("\n", "<br>"))) : "")
-            + button(link, "요청 보기"));
+            + (linkOrNull != null ? button(linkOrNull, "문서 보기") : ""));
         return new MailMessage(to, subject, text, html);
     }
 
-    public MailMessage canceledToRecipient(String to, String name, String title) {
-        String subject = "[취소] " + oneLine(title);
-        String text = name + "님, '" + title + "' 요청이 요청자에 의해 취소되었습니다. 더 이상 작성하지 않아도 됩니다.\n";
+    /** 회수 알림 (지침 6). */
+    public MailMessage recalled(String to, String name, String title) {
+        String subject = "[회수] " + oneLine(title);
+        String text = name + "님, '" + title + "' 문서를 요청자가 회수했습니다. 더 이상 서명하지 않아도 됩니다.\n";
         String html = layout(p(esc(name) + "님, <b>" + esc(title)
-            + "</b> 요청이 요청자에 의해 취소되었습니다. 더 이상 작성하지 않아도 됩니다."));
+            + "</b> 문서를 요청자가 회수했습니다. 더 이상 서명하지 않아도 됩니다."));
         return new MailMessage(to, subject, text, html);
     }
 
