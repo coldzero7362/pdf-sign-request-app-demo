@@ -1,4 +1,4 @@
-package io.github.coldzero7362.pdfsign.document;
+package io.github.coldzero7362.pdfsign.pdf;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -24,7 +24,7 @@ public class PdfInspector {
     public static final int MAX_PAGES = 50;
     private static final byte[] MAGIC = "%PDF-".getBytes(StandardCharsets.US_ASCII);
 
-    public List<DocumentPage> inspect(byte[] content) {
+    public List<PdfPageInfo> inspect(byte[] content) {
         if (!startsWithMagic(content)) {
             throw bad("PDF 파일이 아닙니다.");
         }
@@ -39,7 +39,7 @@ public class PdfInspector {
             if (count > MAX_PAGES) {
                 throw bad("페이지는 최대 " + MAX_PAGES + "장까지 올릴 수 있습니다.");
             }
-            List<DocumentPage> pages = new ArrayList<>(count);
+            List<PdfPageInfo> pages = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
                 PDPage page = pdf.getPage(i);
                 PDRectangle box = page.getCropBox();
@@ -47,7 +47,7 @@ public class PdfInspector {
                 boolean swap = rotation == 90 || rotation == 270;
                 double w = swap ? box.getHeight() : box.getWidth();
                 double h = swap ? box.getWidth() : box.getHeight();
-                pages.add(new DocumentPage(i + 1, round(w), round(h), rotation));
+                pages.add(new PdfPageInfo(i + 1, round(w), round(h), rotation));
             }
             return pages;
         } catch (InvalidPasswordException e) {

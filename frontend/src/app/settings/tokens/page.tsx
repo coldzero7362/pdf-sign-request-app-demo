@@ -20,8 +20,8 @@ type TokenView = {
 
 const SCOPES = [
   { value: "templates:read", label: "템플릿 조회" },
-  { value: "requests:read", label: "문서 조회" },
-  { value: "requests:write", label: "서명 요청·회수·재발송" },
+  { value: "documents:read", label: "문서 조회" },
+  { value: "documents:write", label: "서명 요청·회수·재발송" },
 ];
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("ko-KR") : "-");
@@ -31,7 +31,7 @@ export default function TokensPage() {
   const { me } = useMe();
   const [tokens, setTokens] = useState<TokenView[]>([]);
   const [name, setName] = useState("");
-  const [scopes, setScopes] = useState<string[]>(["requests:read"]);
+  const [scopes, setScopes] = useState<string[]>(["templates:read", "documents:read", "documents:write"]);
   const [days, setDays] = useState(90);
   const [created, setCreated] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

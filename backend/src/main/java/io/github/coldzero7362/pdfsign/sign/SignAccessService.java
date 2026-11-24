@@ -2,13 +2,14 @@ package io.github.coldzero7362.pdfsign.sign;
 
 import io.github.coldzero7362.pdfsign.audit.AuditService;
 import io.github.coldzero7362.pdfsign.common.Tokens;
+import io.github.coldzero7362.pdfsign.document.Document;
+import io.github.coldzero7362.pdfsign.document.DocumentExpiry;
+import io.github.coldzero7362.pdfsign.document.DocumentRepository;
+import io.github.coldzero7362.pdfsign.document.Recipient;
+import io.github.coldzero7362.pdfsign.document.RecipientRepository;
+import io.github.coldzero7362.pdfsign.document.RecipientStatus;
 import io.github.coldzero7362.pdfsign.mail.MailOutbox;
 import io.github.coldzero7362.pdfsign.mail.MailTemplates;
-import io.github.coldzero7362.pdfsign.request.Recipient;
-import io.github.coldzero7362.pdfsign.request.RecipientRepository;
-import io.github.coldzero7362.pdfsign.request.RequestStatus;
-import io.github.coldzero7362.pdfsign.request.SignRequest;
-import io.github.coldzero7362.pdfsign.request.SignRequestRepository;
 import io.github.coldzero7362.pdfsign.sign.SignDtos.LinkInfo;
 import io.github.coldzero7362.pdfsign.sign.SignDtos.OtpSent;
 import io.github.coldzero7362.pdfsign.user.AppUserRepository;
@@ -23,12 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 수신자 본인 확인: 메일 링크 토큰 → 이메일 OTP → HTTP 세션.
+ * 수신자 본인 확인: 메일 링크 토큰 → 이메일 인증번호 → HTTP 세션 (지침 18).
  *
- * - 토큰과 OTP는 해시만 저장한다.
- * - OTP: 6자리, 10분 유효, 5번 틀리면 무효, 재발송 60초 간격, 1시간에 5번까지.
+ * - 토큰과 인증번호는 해시만 저장한다.
+ * - 인증번호: 6자리, 10분 유효, 5번 틀리면 무효, 재발송 60초 간격, 1시간에 5번까지.
  * - 확인에 성공하면 세션 ID를 새로 발급한다 (세션 고정 방지).
- * - 완료된 요청은 완료 후 30일 동안 완료본을 내려받기 위해 접근할 수 있다.
+ * - 진행 중에는 차례가 온 서명자만, 완료 후 30일 동안은 완료 링크를 받은 모두가 들어온다 (지침 12).
  */
 @Service
 public class SignAccessService {
@@ -39,22 +40,22 @@ public class SignAccessService {
     static final int OTP_MAX_SENDS = 5;
     static final int OTP_MAX_ATTEMPTS = 5;
     static final Duration SESSION_TTL = Duration.ofHours(2);
-    static final Duration RESULT_ACCESS = Duration.ofDays(30);
+    public static final Duration RESULT_ACCESS = Duration.ofDays(30);
 
     private final RecipientRepository recipients;
-    private final SignRequestRepository requests;
+    private final DocumentRepository documents;
     private final AppUserRepository users;
     private final AuditService audit;
     private final MailOutbox mail;
     private final MailTemplates templates;
-    private final RequestExpiry expiry;
+    private final DocumentExpiry expiry;
     private final Clock clock;
 
-    public SignAccessService(RecipientRepository recipients, SignRequestRepository requests, AppUserRepository users,
-                             AuditService audit, MailOutbox mail, MailTemplates templates, RequestExpiry expiry,
+    public SignAccessService(RecipientRepository recipients, DocumentRepository documents, AppUserRepository users,
+                             AuditService audit, MailOutbox mail, MailTemplates templates, DocumentExpiry expiry,
                              Clock clock) {
         this.recipients = recipients;
-        this.requests = requests;
+        this.documents = documents;
         this.users = users;
         this.audit = audit;
         this.mail = mail;
@@ -63,18 +64,17 @@ public class SignAccessService {
         this.clock = clock;
     }
 
-    record Access(Recipient recipient, SignRequest request) {
+    public record Access(Recipient recipient, Document document) {
     }
 
     @Transactional
     public LinkInfo linkInfo(String token, HttpSession session) {
         Access a = byToken(token);
         RecipientSession current = session == null ? null : (RecipientSession) session.getAttribute(RecipientSession.ATTR);
-        boolean verified = current != null && current.recipientId().equals(a.recipient().getId())
-            && isFresh(current);
-        String sender = users.findById(a.request().getOwnerId()).map(u -> u.getName()).orElse("");
-        return new LinkInfo(a.request().getTitle(), sender, mask(a.recipient().getEmail()), a.recipient().getRole(),
-            a.request().getStatus(), verified);
+        boolean verified = current != null && current.recipientId().equals(a.recipient().getId()) && isFresh(current);
+        String sender = users.findById(a.document().getOwnerId()).map(u -> u.getName()).orElse("");
+        return new LinkInfo(a.document().getTitle(), sender, mask(a.recipient().getEmail()), a.recipient().getRole(),
+            a.document().getStatus(), verified);
     }
 
     @Transactional(noRollbackFor = ResponseStatusException.class)
@@ -92,8 +92,8 @@ public class SignAccessService {
         }
         String code = Tokens.otp();
         r.issueOtp(otpHash(r, code), now, now.plus(OTP_TTL), OTP_WINDOW);
-        audit.record(a.request().getId(), r.getId(), r.getEmail(), "OTP_SENT", null);
-        mail.send(templates.otp(r.getEmail(), code, a.request().getTitle()));
+        audit.record(a.document().getId(), r.getId(), r.getEmail(), "OTP_SENT", null);
+        mail.send(templates.otp(r.getEmail(), code, a.document().getTitle()));
         return new OtpSent(mask(r.getEmail()), (int) OTP_COOLDOWN.toSeconds());
     }
 
@@ -108,7 +108,7 @@ public class SignAccessService {
         }
         if (!Tokens.equalsConstantTime(r.getOtpHash(), otpHash(r, code))) {
             r.recordOtpFailure();
-            audit.record(a.request().getId(), r.getId(), r.getEmail(), "OTP_FAILED", null);
+            audit.record(a.document().getId(), r.getId(), r.getEmail(), "OTP_FAILED", null);
             if (r.getOtpAttempts() >= OTP_MAX_ATTEMPTS) {
                 r.clearOtp();
                 throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
@@ -118,12 +118,11 @@ public class SignAccessService {
                 "인증번호가 맞지 않습니다. (남은 시도 " + (OTP_MAX_ATTEMPTS - r.getOtpAttempts()) + "번)");
         }
         r.clearOtp();
-        audit.record(a.request().getId(), r.getId(), r.getEmail(), "OTP_VERIFIED", null);
-
-        HttpSession session = http.getSession(true);
+        audit.record(a.document().getId(), r.getId(), r.getEmail(), "OTP_VERIFIED", null);
+        http.getSession(true);
         http.changeSessionId();
-        session = http.getSession(false);
-        session.setAttribute(RecipientSession.ATTR, new RecipientSession(r.getId(), a.request().getId(), now));
+        http.getSession(false).setAttribute(RecipientSession.ATTR,
+            new RecipientSession(r.getId(), a.document().getId(), now));
     }
 
     public void end(HttpSession session) {
@@ -132,7 +131,7 @@ public class SignAccessService {
         }
     }
 
-    /** 세션의 수신자를 찾고, 지금도 접근할 수 있는 상태인지 확인한다. */
+    /** 세션의 수신자를 찾고, 지금도 접근할 수 있는지 확인한다. */
     @Transactional
     public Access current(HttpSession session) {
         RecipientSession s = session == null ? null : (RecipientSession) session.getAttribute(RecipientSession.ATTR);
@@ -141,9 +140,9 @@ public class SignAccessService {
         }
         Recipient r = recipients.findById(s.recipientId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-        SignRequest req = requests.findById(r.getRequestId()).orElseThrow();
-        checkAccessible(r, req);
-        return new Access(r, req);
+        Document d = documents.findById(r.getDocumentId()).orElseThrow();
+        checkAccessible(r, d);
+        return new Access(r, d);
     }
 
     // ---------- 내부 ----------
@@ -151,29 +150,31 @@ public class SignAccessService {
     private Access byToken(String token) {
         Recipient r = recipients.findByAccessTokenHash(Tokens.sha256(token))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "링크가 올바르지 않거나 만료되었습니다."));
-        SignRequest req = requests.findById(r.getRequestId()).orElseThrow();
-        checkAccessible(r, req);
-        return new Access(r, req);
+        Document d = documents.findById(r.getDocumentId()).orElseThrow();
+        checkAccessible(r, d);
+        return new Access(r, d);
     }
 
-    private void checkAccessible(Recipient r, SignRequest req) {
+    private void checkAccessible(Recipient r, Document d) {
         Instant now = clock.instant();
-        expiry.expireIfDue(req, now);
-        switch (req.getStatus()) {
-            case SENT, IN_PROGRESS -> {
+        expiry.expireIfDue(d, now);
+        switch (d.getStatus()) {
+            case IN_PROGRESS -> {
                 if (!r.isSigner()) {
                     throw gone("문서가 완료되면 완료본 링크를 보내 드립니다.");
                 }
-            }
-            case COMPLETED -> {
-                if (req.getCompletedAt() != null && now.isAfter(req.getCompletedAt().plus(RESULT_ACCESS))) {
-                    throw gone("완료본 내려받기 기간(30일)이 지났습니다. 요청자에게 문의해 주세요.");
+                if (r.getStatus() == RecipientStatus.WAITING) {
+                    throw gone("아직 서명할 차례가 아닙니다. 차례가 되면 메일로 알려 드립니다.");
                 }
             }
-            case CANCELED -> throw gone("요청자가 취소한 요청입니다.");
-            case DECLINED -> throw gone("참여자가 거절해 종료된 요청입니다.");
-            case EXPIRED -> throw gone("기한이 지난 요청입니다.");
-            case DRAFT -> throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            case COMPLETED -> {
+                if (d.getCompletedAt() != null && now.isAfter(d.getCompletedAt().plus(RESULT_ACCESS))) {
+                    throw gone("완료 문서 열람 기간(30일)이 지났습니다. 요청자에게 문의해 주세요.");
+                }
+            }
+            case RECALLED -> throw gone("요청자가 회수한 문서입니다.");
+            case REJECTED -> throw gone("서명자가 반려해 종료된 문서입니다.");
+            case EXPIRED -> throw gone("서명 요청 기간이 지난 문서입니다.");
         }
     }
 
@@ -198,9 +199,5 @@ public class SignAccessService {
 
     private static ResponseStatusException gone(String message) {
         return new ResponseStatusException(HttpStatus.GONE, message);
-    }
-
-    static boolean isOpen(RequestStatus s) {
-        return s.isOpen();
     }
 }

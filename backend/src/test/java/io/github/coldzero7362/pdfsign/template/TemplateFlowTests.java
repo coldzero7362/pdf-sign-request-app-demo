@@ -190,7 +190,7 @@ class TemplateFlowTests {
         // 조회 스코프가 없는 토큰은 템플릿을 볼 수 없다
         String body2 = mvc.perform(post("/api/v1/me/tokens").with(OWNER).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"r\",\"scopes\":[\"requests:read\"]}"))
+                .content("{\"name\":\"r\",\"scopes\":[\"documents:read\"]}"))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         mvc.perform(get("/api/v1/templates").header("Authorization", "Bearer " + JsonPath.read(body2, "$.token")))
             .andExpect(status().isForbidden());

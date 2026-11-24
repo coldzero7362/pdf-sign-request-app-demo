@@ -518,7 +518,7 @@ export function TemplateEditor({ initial }: { initial: TemplateView }) {
             </button>
           </div>
           <p className="muted small">
-            <code>POST /api/v1/documents</code> 요청 예시입니다 (서명 요청 API는 다음 단계에서 열립니다).
+            API 토큰(<code>documents:write</code>)으로 <code>POST /api/v1/documents</code>에 보내면 서명 요청이 발송됩니다.
           </p>
           <pre className="code-block">{JSON.stringify(server.requestExample, null, 2)}</pre>
         </section>

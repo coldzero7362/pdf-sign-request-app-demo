@@ -1,7 +1,7 @@
 package io.github.coldzero7362.pdfsign.template;
 
-import io.github.coldzero7362.pdfsign.document.DocumentService;
-import io.github.coldzero7362.pdfsign.document.DocumentService.StoredPdf;
+import io.github.coldzero7362.pdfsign.pdf.PdfStore;
+import io.github.coldzero7362.pdfsign.pdf.PdfStore.StoredPdf;
 import io.github.coldzero7362.pdfsign.template.TemplateDtos.FieldInput;
 import io.github.coldzero7362.pdfsign.template.TemplateDtos.FieldView;
 import io.github.coldzero7362.pdfsign.template.TemplateDtos.PageView;
@@ -39,11 +39,11 @@ public class TemplateService {
     private final TemplateSlotRepository slots;
     private final TemplateFieldRepository fields;
     private final AppUserRepository users;
-    private final DocumentService pdfs;
+    private final PdfStore pdfs;
     private final Clock clock;
 
     public TemplateService(TemplateRepository templates, TemplateSlotRepository slots,
-                           TemplateFieldRepository fields, AppUserRepository users, DocumentService pdfs,
+                           TemplateFieldRepository fields, AppUserRepository users, PdfStore pdfs,
                            Clock clock) {
         this.templates = templates;
         this.slots = slots;
@@ -67,7 +67,7 @@ public class TemplateService {
             finalName = finalName.substring(0, 100);
         }
         List<TemplatePage> pages = stored.pages().stream()
-            .map(p -> new TemplatePage(p.getPageNo(), p.getWidth(), p.getHeight(), p.getRotation()))
+            .map(p -> new TemplatePage(p.pageNo(), p.width(), p.height(), p.rotation()))
             .toList();
         Template t = templates.save(new Template(owner.getId(), templateNo, finalName, stored.storageKey(),
             stored.fileName(), stored.sizeBytes(), stored.sha256(), pages, clock.instant()));
@@ -131,6 +131,28 @@ public class TemplateService {
         return view(fresh);
     }
 
+    /** 서명 요청용: 번호로 템플릿을 찾는다 (삭제된 것 제외). */
+    @Transactional(readOnly = true)
+    public Template findForRequest(Long ownerId, String templateNo) {
+        return templates.findByOwnerIdAndTemplateNoAndDeletedAtIsNull(ownerId, templateNo)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "템플릿을 찾을 수 없습니다: " + templateNo));
+    }
+
+    @Transactional(readOnly = true)
+    public List<TemplateSlot> slotsOf(Template t) {
+        return slots.findByTemplateIdOrderByOrderNo(t.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<TemplateField> fieldsOf(Template t) {
+        return fields.findByTemplateIdOrderByPageNoAscYAscXAsc(t.getId());
+    }
+
+    /** 요청에 쓸 수 있는지 (빈 목록이면 준비 완료). */
+    public List<String> problemsOf(Template t) {
+        return problems(slotsOf(t), fieldsOf(t));
+    }
+
     /** 삭제는 숨김 처리. 이미 보낸 문서는 발송 때 복사해 둔 내용을 쓰므로 영향이 없다. */
     @Transactional
     public void delete(AppUser owner, String templateNo) {
@@ -143,7 +165,7 @@ public class TemplateService {
     }
 
     public InputStream openPdf(Template t) {
-        return pdfs.openKey(t.getPdfStorageKey());
+        return pdfs.open(t.getPdfStorageKey());
     }
 
     // ---------- 내부 ----------
